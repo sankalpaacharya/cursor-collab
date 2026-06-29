@@ -1,4 +1,3 @@
-import http from 'node:http';
 import { config } from './shared/config.ts';
 import { logger } from './shared/logger.ts';
 import { createApp } from './app.ts';
@@ -7,7 +6,7 @@ import { createSocketServer, type SocketServer } from './socket.ts';
 import type { Stats } from './features/health/routes.ts';
 
 /**
- * Composition root: wires the presence store, Express app, HTTP server and
+ * Composition root: wires the presence store, Fastify app, HTTP server and
  * Socket.IO server together, then starts listening. Handles graceful shutdown
  * so that rolling deploys / autoscaling don't strand clients or leak presence.
  */
@@ -23,16 +22,16 @@ async function main(): Promise<void> {
     return { localConnections: sockets.length, activeRooms: rooms.length };
   };
 
-  const app = createApp(getStats);
-  const httpServer = http.createServer(app);
-  socketServer = await createSocketServer(httpServer, store);
+  const app = await createApp(getStats);
+  // Fastify creates the underlying http.Server eagerly, so Socket.IO can attach
+  // to `app.server` before we start listening.
+  socketServer = await createSocketServer(app.server, store);
+  await app.listen({ port: config.port, host: config.host });
 
-  httpServer.listen(config.port, config.host, () => {
-    logger.info(
-      { port: config.port, host: config.host, serverId: config.serverId, env: config.nodeEnv },
-      'cursor-server listening',
-    );
-  });
+  logger.info(
+    { port: config.port, host: config.host, serverId: config.serverId, env: config.nodeEnv },
+    'cursor-server listening',
+  );
 
   // ---- Graceful shutdown -------------------------------------------------
   let shuttingDown = false;
@@ -41,9 +40,9 @@ async function main(): Promise<void> {
     shuttingDown = true;
     logger.info({ signal }, 'shutting down');
 
-    // Stop accepting new HTTP connections, close sockets (clients auto-reconnect
-    // to another replica), then release Redis. Presence left behind is reaped by
-    // the surviving replicas' sweep loop within presenceTtlMs.
+    // Close sockets (clients auto-reconnect to another replica), then the HTTP
+    // server, then release Redis. Presence left behind is reaped by the
+    // surviving replicas' sweep loop within presenceTtlMs.
     const timer = setTimeout(() => {
       logger.error('forced shutdown after timeout');
       process.exit(1);
@@ -52,7 +51,7 @@ async function main(): Promise<void> {
 
     try {
       await socketServer?.close();
-      await new Promise<void>((resolve) => httpServer.close(() => resolve()));
+      await app.close();
       await store.disconnect();
       logger.info('shutdown complete');
       process.exit(0);

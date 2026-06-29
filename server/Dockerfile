@@ -1,4 +1,4 @@
-# ---- Backend image: Express + Socket.IO cursor server (TypeScript) ----
+# ---- Backend image: Fastify + Socket.IO cursor server (TypeScript) ----
 # Node >= 23 runs .ts directly via native type stripping, so there is no build
 # step — we ship the source and execute it.
 FROM node:24-alpine

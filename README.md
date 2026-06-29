@@ -10,13 +10,13 @@ brief reconnect.
 ```
 browser ──▶ caddy (gateway) ──┬──▶ backend 1 ─┐
                               └──▶ backend 2 ─┴──▶ redis
-   React/Vite   serves client +     Express +      adapter (fan-out)
+   React/Vite   serves client +     Fastify +      adapter (fan-out)
                 load-balances ws     Socket.IO      + presence state
 ```
 
 ## Stack
 
-TypeScript · Express + Socket.IO · Redis (`@socket.io/redis-adapter`) · React + Vite · Caddy · pnpm workspaces
+TypeScript · Fastify + Socket.IO · Redis (`@socket.io/redis-adapter`) · React + Vite · Caddy · pnpm workspaces
 
 ## Run it
 

@@ -1,7 +1,8 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import http from 'node:http';
+import type { AddressInfo } from 'node:net';
 import { io as ioClient, type Socket } from 'socket.io-client';
+import type { FastifyInstance } from 'fastify';
 import { createApp } from '../src/app.ts';
 import { createSocketServer, type SocketServer } from '../src/socket.ts';
 import { MemoryPresenceStore } from '../src/features/presence/memory-store.ts';
@@ -12,7 +13,7 @@ import type { JoinAck, JoinPayload } from '../src/features/cursors/types.ts';
 // so they need no Redis. Run with: pnpm test
 process.env.REDIS_ENABLED = 'false';
 
-let httpServer: http.Server;
+let app: FastifyInstance;
 let socketServer: SocketServer;
 let url: string;
 
@@ -32,18 +33,16 @@ const once = <T = unknown>(socket: Socket, event: string): Promise<T> =>
 before(async () => {
   const store = new MemoryPresenceStore();
   await store.connect();
-  const app = createApp(async () => ({}));
-  httpServer = http.createServer(app);
-  socketServer = await createSocketServer(httpServer, store);
-  await new Promise<void>((resolve) => httpServer.listen(0, resolve));
-  const addr = httpServer.address();
-  const port = typeof addr === 'object' && addr ? addr.port : 0;
+  app = await createApp(async () => ({}));
+  socketServer = await createSocketServer(app.server, store);
+  await app.listen({ port: 0, host: '127.0.0.1' });
+  const { port } = app.server.address() as AddressInfo;
   url = `http://localhost:${port}`;
 });
 
 after(async () => {
   await socketServer.close();
-  await new Promise<void>((resolve) => httpServer.close(() => resolve()));
+  await app.close();
 });
 
 test('join returns self identity and an empty peer list for the first user', async () => {
