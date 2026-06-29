@@ -1,6 +1,6 @@
 # Full multi-server deployment, locally reproducible:
 #
-#   browser ──> gateway (nginx :8080) ──┬──> backend1 :3001 ─┐
+#   browser ──> gateway (caddy :8080) ──┬──> backend1 :3001 ─┐
 #                serves client +         └──> backend2 :3001 ─┴──> redis :6379
 #                load-balances ws                              (adapter + presence)
 #
@@ -47,7 +47,7 @@ services:
   gateway:
     build:
       context: .
-      dockerfile: nginx/Dockerfile
+      dockerfile: caddy/Dockerfile
     ports:
       - '8080:80'
     depends_on:

@@ -8,7 +8,7 @@ servers can be killed, restarted or upgraded without users noticing more than a
 brief reconnect.
 
 ```
-browser ──▶ nginx (gateway) ──┬──▶ backend 1 ─┐
+browser ──▶ caddy (gateway) ──┬──▶ backend 1 ─┐
                               └──▶ backend 2 ─┴──▶ redis
    React/Vite   serves client +     Express +      adapter (fan-out)
                 load-balances ws     Socket.IO      + presence state
@@ -16,7 +16,7 @@ browser ──▶ nginx (gateway) ──┬──▶ backend 1 ─┐
 
 ## Stack
 
-TypeScript · Express + Socket.IO · Redis (`@socket.io/redis-adapter`) · React + Vite · Nginx · pnpm workspaces
+TypeScript · Express + Socket.IO · Redis (`@socket.io/redis-adapter`) · React + Vite · Caddy · pnpm workspaces
 
 ## Run it
 
@@ -36,7 +36,7 @@ pnpm dev:client                       # client  → :5173
 Open <http://localhost:5173> in two windows and move your mouse. Use `?room=design`
 in the URL to pick a room.
 
-**Full multi-server topology** — Redis + 2 backends + nginx gateway, via Docker:
+**Full multi-server topology** — Redis + 2 backends + Caddy gateway, via Docker:
 
 ```bash
 docker compose up --build             # → http://localhost:8080
