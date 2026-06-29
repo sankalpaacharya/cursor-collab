@@ -1,7 +1,7 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
-import { corsOptions } from './shared/config.ts';
-import { healthRoutes, type Stats } from './features/health/routes.ts';
+import { corsOptions } from '../shared/config.ts';
+import { healthRoutes, type Stats } from '../features/health/routes.ts';
 
 /**
  * Builds the Fastify HTTP application. Socket.IO attaches to the same underlying

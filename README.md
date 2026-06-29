@@ -76,7 +76,7 @@ server/src/
     presence/   store interface + redis & in-memory backends
     health/     /healthz · /stats
   shared/       config · logger · redis client
-  socket.ts · app.ts · index.ts
+  bootstrap/    index.ts (entry) · app.ts (fastify) · socket.ts (socket.io + adapter)
 
 client/src/
   features/cursors/   components · use-cursors hook · socket · types

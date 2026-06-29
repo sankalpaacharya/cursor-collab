@@ -25,4 +25,4 @@ HEALTHCHECK --interval=10s --timeout=3s --retries=3 \
 # Run as the built-in non-root user.
 USER node
 
-CMD ["node", "src/index.ts"]
+CMD ["node", "src/bootstrap/index.ts"]

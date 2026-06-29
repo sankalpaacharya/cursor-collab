@@ -1,9 +1,9 @@
-import { config } from './shared/config.ts';
-import { logger } from './shared/logger.ts';
+import { config } from '../shared/config.ts';
+import { logger } from '../shared/logger.ts';
 import { createApp } from './app.ts';
-import { createPresenceStore } from './features/presence/index.ts';
+import { createPresenceStore } from '../features/presence/index.ts';
 import { createSocketServer, type SocketServer } from './socket.ts';
-import type { Stats } from './features/health/routes.ts';
+import type { Stats } from '../features/health/routes.ts';
 
 /**
  * Composition root: wires the presence store, Fastify app, HTTP server and

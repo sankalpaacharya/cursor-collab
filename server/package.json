@@ -3,13 +3,13 @@
   "version": "1.0.0",
   "description": "Real-time shared-workspace cursor tracking backend (Fastify + Socket.IO + Redis, TypeScript)",
   "type": "module",
-  "main": "src/index.ts",
+  "main": "src/bootstrap/index.ts",
   "engines": {
     "node": ">=22"
   },
   "scripts": {
-    "start": "node src/index.ts",
-    "dev": "node --watch src/index.ts",
+    "start": "node src/bootstrap/index.ts",
+    "dev": "node --watch src/bootstrap/index.ts",
     "typecheck": "tsc --noEmit",
     "test": "REDIS_ENABLED=false node --test 'test/**/*.test.ts'",
     "loadtest": "node test/load-test.ts"

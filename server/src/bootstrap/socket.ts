@@ -1,16 +1,16 @@
 import { Server } from 'socket.io';
 import type { Server as HttpServer } from 'node:http';
 import { createAdapter } from '@socket.io/redis-adapter';
-import { config, corsOptions } from './shared/config.ts';
-import { logger } from './shared/logger.ts';
-import { createRedisClient } from './shared/redis.ts';
-import { registerCursorHandlers } from './features/cursors/handlers.ts';
+import { config, corsOptions } from '../shared/config.ts';
+import { logger } from '../shared/logger.ts';
+import { createRedisClient } from '../shared/redis.ts';
+import { registerCursorHandlers } from '../features/cursors/handlers.ts';
 import type {
   ClientToServerEvents,
   ServerToClientEvents,
   SocketData,
-} from './features/cursors/types.ts';
-import type { PresenceStore } from './features/presence/store.types.ts';
+} from '../features/cursors/types.ts';
+import type { PresenceStore } from '../features/presence/store.types.ts';
 
 type TypedServer = Server<
   ClientToServerEvents,
