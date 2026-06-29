@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+client/dist/
+dist/
+*.tsbuildinfo
+
+# Local editor/agent config
+.claude/
+
+# Env
+.env
+.env.local
+*.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor / OS
+.DS_Store
+.vscode/
+.idea/

@@ -1,0 +1,21 @@
+{
+  "name": "live-cursors",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Real-time shared-workspace cursor tracking (Express + Socket.IO + Redis, React + Vite, TypeScript)",
+  "scripts": {
+    "dev:server": "pnpm --filter cursor-server dev",
+    "dev:client": "pnpm --filter cursor-client dev",
+    "build:client": "pnpm --filter cursor-client build",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm --filter cursor-server test",
+    "loadtest": "pnpm --filter cursor-server loadtest"
+  },
+  "engines": {
+    "node": ">=22",
+    "pnpm": ">=8"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild"]
+  }
+}
