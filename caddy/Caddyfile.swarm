@@ -1,0 +1,30 @@
+:80 {
+	handle /socket.io/* {
+		reverse_proxy {
+			dynamic a {
+				name tasks.backend
+				port 3001
+				refresh 5s
+			}
+			lb_policy cookie
+		}
+	}
+
+	@probes path /healthz /stats
+	handle @probes {
+		reverse_proxy {
+			dynamic a {
+				name tasks.backend
+				port 3001
+				refresh 5s
+			}
+			lb_policy cookie
+		}
+	}
+
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}

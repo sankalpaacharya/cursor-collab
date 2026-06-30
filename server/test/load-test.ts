@@ -28,7 +28,6 @@ async function run(): Promise<void> {
   let received = 0;
   const latencies: number[] = [];
 
-  // The sender's most recent emit time, shared across the process.
   let senderLastEmit = 0;
   const SENDER_ID = 'user-0';
 
@@ -50,8 +49,6 @@ async function run(): Promise<void> {
         resolve();
       });
 
-      // Every client counts broadcasts; receivers of the sender's moves measure
-      // latency against the shared emit timestamp.
       socket.on(EVENTS.MOVED, (m: { id: string }) => {
         received += 1;
         if (m.id === SENDER_ID && senderLastEmit) {
@@ -62,7 +59,6 @@ async function run(): Promise<void> {
       clients.push({ socket, userId });
     });
 
-  // ---- connect all users, ramped in batches to avoid a connect thundering herd ----
   const t0 = Date.now();
   for (let start = 0; start < USERS; start += CONNECT_BATCH) {
     const batch = Array.from(
@@ -73,7 +69,6 @@ async function run(): Promise<void> {
   }
   console.log(`Connected ${connected}/${USERS} (failed ${failed}) in ${Date.now() - t0}ms\n`);
 
-  // ---- drive cursor movement ----
   const intervalMs = Math.max(1, Math.floor(1000 / MOVE_HZ));
   const timers = clients.map(({ socket, userId }) =>
     setInterval(() => {
@@ -84,10 +79,8 @@ async function run(): Promise<void> {
 
   await sleep(DURATION_MS);
   timers.forEach(clearInterval);
-  // Give in-flight broadcasts a moment to land before tearing down.
   await sleep(500);
 
-  // ---- report ----
   const seconds = DURATION_MS / 1000;
   const sorted = latencies.sort((a, b) => a - b);
   console.log('Results');

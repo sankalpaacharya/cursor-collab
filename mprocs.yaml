@@ -1,8 +1,3 @@
-# mprocs — interactive TUI dev runner.
-#
-# Launched by ./start (scripts/dev.sh) after Redis is up. Each entry below
-# becomes a pane in the process list; select with ↑/↓, focus its output with
-# <enter>, restart with `r`, stop with `x`, quit everything with `q`.
 procs:
   server:
     shell: "node --watch src/bootstrap/index.ts"

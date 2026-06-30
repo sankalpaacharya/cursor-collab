@@ -76,17 +76,13 @@ do_install() {
 
 ensure_installed() {
   require_node; ensure_pnpm
-  if [[ "${SKIP_INSTALL:-false}" == "true" ]]; then
-    deps_present || warn "Dependencies look missing — run 'Setup' first if startup fails."
+  if deps_present; then
+    [[ "${SKIP_INSTALL:-false}" == "true" ]] || ok "Dependencies already installed."
     return 0
   fi
-  if deps_present; then
-    ok "Dependencies already installed."
-  else
-    info "Installing dependencies (first run)…"
-    pnpm install
-    ok "Dependencies installed."
-  fi
+  info "Installing dependencies…"
+  pnpm install
+  ok "Dependencies installed."
 }
 
 do_test() {
@@ -95,13 +91,19 @@ do_test() {
   exec pnpm test
 }
 
+port_in_use() { (exec 3<>"/dev/tcp/127.0.0.1/$1") 2>/dev/null && exec 3>&- && return 0 || return 1; }
+
 do_docker() {
   require_node
   command -v docker >/dev/null || die "docker is not installed"
+  local port="${GATEWAY_PORT:-8080}"
+  if port_in_use "$port"; then
+    die "Port $port is already in use. Free it, or pick another: GATEWAY_PORT=9090 ./start --docker"
+  fi
   banner
   info "Starting full topology (Redis + 2 backends + Caddy gateway)…"
-  info "App will be available at ${BOLD}http://localhost:8080${NC}"
-  exec docker compose up --build
+  info "App will be available at ${BOLD}http://localhost:${port}${NC}"
+  GATEWAY_PORT="$port" exec docker compose up --build
 }
 
 REDIS_CONTAINER="cursor-redis"
