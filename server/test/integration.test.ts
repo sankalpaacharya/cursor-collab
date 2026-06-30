@@ -34,7 +34,7 @@ before(async () => {
   const store = new MemoryPresenceStore();
   await store.connect();
   app = await createApp(async () => ({}));
-  socketServer = await createSocketServer(app.server, store);
+  socketServer = await createSocketServer(app.server, store, false);
   await app.listen({ port: 0, host: '127.0.0.1' });
   const { port } = app.server.address() as AddressInfo;
   url = `http://localhost:${port}`;

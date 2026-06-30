@@ -6,13 +6,12 @@
 #   ./start --dev           Setup if needed, then run backend + client.
 #   ./start --install       Install dependencies only.
 #   ./start --docker        Full topology (Redis + 2 backends + Caddy).
-#   ./start --redis         Local dev, but use a real Redis at $REDIS_URL.
 #   ./start --test          Run the test suite.
 #   ./start --help
 #
-# Local dev runs the backend in-memory (no Redis) on :3001 and the Vite client
-# on :5173, which proxies WebSocket traffic to the backend automatically.
-# Press Ctrl-C to stop.
+# Local dev runs Redis (reusing one on :6379 or starting a container), the
+# backend on :3001, and the Vite client on :5173 which proxies WebSocket traffic
+# to the backend. Press Ctrl-C to stop.
 
 set -euo pipefail
 
@@ -104,35 +103,86 @@ do_docker() {
   exec docker compose up --build
 }
 
+REDIS_CONTAINER="cursor-redis"
+STARTED_REDIS=false
+
+# True if something is already listening on localhost:6379.
+redis_port_open() { (exec 3<>/dev/tcp/127.0.0.1/6379) 2>/dev/null && exec 3>&- && return 0 || return 1; }
+
+# Ensure a Redis is reachable on :6379. Reuse an existing one (e.g. your docker
+# stack), otherwise start a small disposable container.
+ensure_redis() {
+  export REDIS_ENABLED="true"
+  export REDIS_URL="${REDIS_URL:-redis://localhost:6379}"
+
+  if redis_port_open; then
+    ok "Redis already running on :6379 — using it."
+    return
+  fi
+  command -v docker >/dev/null \
+    || die "Redis isn't running on :6379 and docker isn't available. Start Redis, then re-run."
+
+  info "Starting Redis (docker container '$REDIS_CONTAINER')…"
+  if docker ps -a --format '{{.Names}}' | grep -qx "$REDIS_CONTAINER"; then
+    docker start "$REDIS_CONTAINER" >/dev/null
+  else
+    docker run -d --name "$REDIS_CONTAINER" -p 6379:6379 redis:7-alpine >/dev/null
+  fi
+  STARTED_REDIS=true
+  for _ in $(seq 1 20); do redis_port_open && break; sleep 0.3; done
+  redis_port_open || die "Redis failed to start on :6379"
+  ok "Redis ready."
+}
+
+DEV_CLEANED=0
+CONCURRENTLY_PID=""
+
 do_dev() {
   ensure_installed
-
-  if [[ "${USE_REDIS:-false}" == "true" ]]; then
-    export REDIS_ENABLED="true"
-    info "Backend will use Redis at ${REDIS_URL:-redis://localhost:6379}"
-  else
-    export REDIS_ENABLED="false"
-  fi
-
-  prefix() {
-    local label="$1" color="$2"
-    while IFS= read -r line; do
-      printf "%s%s│%s %s\n" "$color" "$label" "$NC" "$line"
-    done
-  }
-
-  cleanup() { trap - INT TERM EXIT; printf "\n"; info "Shutting down…"; kill 0 2>/dev/null || true; }
-  trap cleanup INT TERM EXIT
+  ensure_redis
 
   printf "%s%sStarting…%s\n" "$BOLD" "$GREEN" "$NC"
-  printf "  backend  %shttp://localhost:3001%s  (store: %s)\n" "$DIM" "$NC" \
-    "$([[ ${USE_REDIS:-false} == true ]] && echo redis || echo in-memory)"
+  printf "  backend  %shttp://localhost:3001%s  (store: redis)\n" "$DIM" "$NC"
   printf "  client   %shttp://localhost:5173%s  %s← open this, in two windows%s\n\n" \
     "$DIM" "$NC" "$BOLD" "$NC"
 
-  ( pnpm --filter cursor-server dev 2>&1 | prefix "server " "$CYAN" ) &
-  ( pnpm --filter cursor-client dev 2>&1 | prefix "client " "$MAGENTA" ) &
-  wait
+  # `concurrently` supervises both processes: clean aligned [server]/[client]
+  # output, and it tree-kills the whole process tree on shutdown — no orphaned
+  # vite/node. `exec` makes each dev binary the direct child so signals land
+  # without an intermediate pnpm swallowing them.
+  #
+  # We run it in the BACKGROUND and signal it BY PID from the trap, because some
+  # tools (pnpm/node) place themselves in their own process group, which a plain
+  # terminal Ctrl-C can miss. Explicit `kill` guarantees delivery.
+  node_modules/.bin/concurrently \
+    --kill-others \
+    --names "server,client" \
+    --prefix-colors "cyan,magenta" \
+    "cd server && exec node --watch src/bootstrap/index.ts" \
+    "cd client && exec node_modules/.bin/vite" &
+  CONCURRENTLY_PID=$!
+
+  trap dev_cleanup INT TERM EXIT
+  wait "$CONCURRENTLY_PID"
+  dev_cleanup
+}
+
+# Tears down the dev session: stop the process supervisor (which tree-kills the
+# server + client), then the Redis container if we started it. Idempotent.
+dev_cleanup() {
+  [[ "$DEV_CLEANED" == "1" ]] && return
+  DEV_CLEANED=1
+  trap - INT TERM EXIT
+
+  if [[ -n "$CONCURRENTLY_PID" ]]; then
+    printf "\n"; info "Shutting down…"
+    kill -INT "$CONCURRENTLY_PID" 2>/dev/null || true
+    wait "$CONCURRENTLY_PID" 2>/dev/null || true
+  fi
+  if [[ "$STARTED_REDIS" == "true" ]]; then
+    info "Stopping Redis…"
+    docker stop "$REDIS_CONTAINER" >/dev/null 2>&1 || true
+  fi
 }
 
 # ---- interactive menu --------------------------------------------------------
@@ -167,7 +217,6 @@ menu() {
 }
 
 # ---- arg parsing -------------------------------------------------------------
-USE_REDIS="false"
 ACTION=""
 for arg in "$@"; do
   case "$arg" in
@@ -175,8 +224,7 @@ for arg in "$@"; do
     --install|--setup) ACTION="install" ;;
     --docker)   ACTION="docker" ;;
     --test)     ACTION="test" ;;
-    --redis)    USE_REDIS="true" ;;
-    -h|--help)  sed -n '3,20p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help)  sed -n '3,19p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) die "unknown option: $arg (try --help)" ;;
   esac
 done

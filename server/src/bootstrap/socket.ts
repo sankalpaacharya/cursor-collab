@@ -1,7 +1,7 @@
 import { Server } from 'socket.io';
 import type { Server as HttpServer } from 'node:http';
 import { createAdapter } from '@socket.io/redis-adapter';
-import { config, corsOptions } from '../shared/config.ts';
+import { corsOptions } from '../shared/config.ts';
 import { logger } from '../shared/logger.ts';
 import { createRedisClient } from '../shared/redis.ts';
 import { registerCursorHandlers } from '../features/cursors/handlers.ts';
@@ -30,8 +30,8 @@ export interface SocketServer {
  * horizontal scaling work: replica A publishes a cursor move to Redis, and
  * replicas B, C, ... deliver it to their own clients. No-op when Redis is off.
  */
-async function attachRedisAdapter(io: TypedServer): Promise<() => Promise<void>> {
-  if (!config.redisEnabled) {
+async function attachRedisAdapter(io: TypedServer, useRedis: boolean): Promise<() => Promise<void>> {
+  if (!useRedis) {
     logger.warn('redis adapter disabled — running as a single replica');
     return async () => {};
   }
@@ -55,6 +55,7 @@ async function attachRedisAdapter(io: TypedServer): Promise<() => Promise<void>>
 export async function createSocketServer(
   httpServer: HttpServer,
   store: PresenceStore,
+  useRedis: boolean,
 ): Promise<SocketServer> {
   const io: TypedServer = new Server(httpServer, {
     cors: corsOptions,
@@ -66,7 +67,7 @@ export async function createSocketServer(
     transports: ['websocket', 'polling'],
   });
 
-  const closeAdapter = await attachRedisAdapter(io);
+  const closeAdapter = await attachRedisAdapter(io, useRedis);
   const stopLoops = registerCursorHandlers(io, store);
 
   return {

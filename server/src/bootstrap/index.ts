@@ -1,9 +1,28 @@
 import { config } from '../shared/config.ts';
 import { logger } from '../shared/logger.ts';
+import { isRedisReachable } from '../shared/redis.ts';
 import { createApp } from './app.ts';
 import { createPresenceStore } from '../features/presence/index.ts';
 import { createSocketServer, type SocketServer } from './socket.ts';
 import type { Stats } from '../features/health/routes.ts';
+
+/**
+ * Decide the presence/fan-out backend. With REDIS_ENABLED=true (the default) we
+ * REQUIRE Redis: if it is unreachable we fail fast with a clear error rather than
+ * silently degrading to a single in-memory replica. REDIS_ENABLED=false is the
+ * explicit opt-in to single-replica in-memory mode (used by the test suite).
+ */
+async function resolveRedisMode(): Promise<boolean> {
+  if (!config.redisEnabled) return false;
+
+  if (await isRedisReachable()) return true;
+
+  throw new Error(
+    `Redis is unreachable at ${config.redisUrl}. Start Redis and retry ` +
+      `(./start brings one up automatically), or set REDIS_ENABLED=false to run a ` +
+      `single in-memory replica.`,
+  );
+}
 
 /**
  * Composition root: wires the presence store, Fastify app, HTTP server and
@@ -11,7 +30,8 @@ import type { Stats } from '../features/health/routes.ts';
  * so that rolling deploys / autoscaling don't strand clients or leak presence.
  */
 async function main(): Promise<void> {
-  const store = await createPresenceStore();
+  const useRedis = await resolveRedisMode();
+  const store = await createPresenceStore(useRedis);
 
   // `getStats` is shared by the HTTP /stats route. Defined before the socket
   // server exists, so it closes over `socketServer` lazily.
@@ -25,7 +45,7 @@ async function main(): Promise<void> {
   const app = await createApp(getStats);
   // Fastify creates the underlying http.Server eagerly, so Socket.IO can attach
   // to `app.server` before we start listening.
-  socketServer = await createSocketServer(app.server, store);
+  socketServer = await createSocketServer(app.server, store, useRedis);
   await app.listen({ port: config.port, host: config.host });
 
   logger.info(

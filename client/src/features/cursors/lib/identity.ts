@@ -1,12 +1,4 @@
-/**
- * Stable, per-browser user identity.
- *
- * The id is persisted in localStorage so that a user keeps the same identity
- * (and therefore the same colour/label assigned by the server) across page
- * reloads and — crucially — across reconnections when a backend replica is
- * killed or replaced. The server derives colour/label deterministically from
- * this id, so identity is consistent everywhere.
- */
+
 const USER_ID_KEY = 'cursor:userId';
 const NAME_KEY = 'cursor:name';
 

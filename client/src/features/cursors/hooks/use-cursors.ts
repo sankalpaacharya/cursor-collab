@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { createSocket, type AppSocket } from './socket';
-import { EVENTS } from './events';
-import { getUserId } from './identity';
-import type { ConnectionStatus, CursorUser, JoinAck } from './types';
+import { createSocket, type AppSocket } from '../lib/socket';
+import { EVENTS } from '../lib/events';
+import { getUserId } from '../lib/identity';
+import type { ConnectionStatus, CursorUser, JoinAck } from '../types';
 
 interface UseCursorsResult {
   self: CursorUser | null;

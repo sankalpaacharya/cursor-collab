@@ -1,7 +1,34 @@
-# Live Cursors
+<p align="center">
+  <img src="assets/logo.png" alt="Live Cursors logo" width="180" />
+</p>
 
-Real-time shared workspace where everyone sees each other's cursor move live —
-the spatial-awareness primitive behind tools like Figma and Miro.
+<h1 align="center">Cursor Collab</h1>
+
+<p align="center">
+  Real-time shared workspace where everyone sees each other's cursor move live —
+  <br />the spatial-awareness primitive behind tools like Figma and Miro.
+</p>
+
+<p align="center">
+  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white" />
+  <img alt="Node.js" src="https://img.shields.io/badge/Node.js%20%E2%89%A522-339933?style=flat-square&logo=node.js&logoColor=white" />
+  <img alt="Fastify" src="https://img.shields.io/badge/Fastify-000000?style=flat-square&logo=fastify&logoColor=white" />
+  <img alt="Socket.IO" src="https://img.shields.io/badge/Socket.IO-010101?style=flat-square&logo=socket.io&logoColor=white" />
+  <img alt="Redis" src="https://img.shields.io/badge/Redis-DC382D?style=flat-square&logo=redis&logoColor=white" />
+  <img alt="React" src="https://img.shields.io/badge/React-20232A?style=flat-square&logo=react&logoColor=61DAFB" />
+  <img alt="Vite" src="https://img.shields.io/badge/Vite-646CFF?style=flat-square&logo=vite&logoColor=white" />
+  <img alt="Caddy" src="https://img.shields.io/badge/Caddy-1F88C0?style=flat-square&logo=caddy&logoColor=white" />
+  <img alt="pnpm" src="https://img.shields.io/badge/pnpm-F69220?style=flat-square&logo=pnpm&logoColor=white" />
+</p>
+
+<p align="center">
+  <a href="#run-it">Run it</a> ·
+  <a href="#how-scaling-works">How scaling works</a> ·
+  <a href="#protocol">Protocol</a> ·
+  <a href="#configuration">Configuration</a>
+</p>
+
+---
 
 Built to scale **horizontally**: stateless replicas coordinated through Redis, so
 servers can be killed, restarted or upgraded without users noticing more than a

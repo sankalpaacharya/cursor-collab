@@ -9,8 +9,18 @@
  * protocol.
  *
  * Usage:
- *   URL=http://localhost:3001 USERS=100 DURATION_MS=15000 MOVE_HZ=20 \
+ *   URL=http://localhost:8080 USERS=1000 ROOMS=10 DURATION_MS=20000 MOVE_HZ=15 \
  *     pnpm loadtest
+ *
+ * Knobs (all via env):
+ *   URL          target (gateway :8080 for multi-replica, :3001 for one backend)
+ *   USERS        number of simulated clients
+ *   ROOMS        spread users across this many rooms (default 1 = one big room).
+ *                Real workspaces have many rooms; one giant room is a worst-case
+ *                fan-out that mostly stresses THIS test process, not the server.
+ *   DURATION_MS  how long to drive cursor movement
+ *   MOVE_HZ      cursor moves per second, per client
+ *   CONNECT_BATCH ramp connections in batches of this size (default 200)
  */
 import { io as ioClient, type Socket } from 'socket.io-client';
 import { EVENTS } from '../src/features/cursors/events.ts';
@@ -18,9 +28,15 @@ import type { JoinAck } from '../src/features/cursors/types.ts';
 
 const URL = process.env.URL ?? 'http://localhost:3001';
 const USERS = Number.parseInt(process.env.USERS ?? '100', 10);
+const ROOMS = Math.max(1, Number.parseInt(process.env.ROOMS ?? '1', 10));
 const ROOM = process.env.ROOM ?? 'loadtest';
 const DURATION_MS = Number.parseInt(process.env.DURATION_MS ?? '15000', 10);
 const MOVE_HZ = Number.parseInt(process.env.MOVE_HZ ?? '20', 10);
+const CONNECT_BATCH = Math.max(1, Number.parseInt(process.env.CONNECT_BATCH ?? '200', 10));
+
+// Which room a given user index belongs to. The latency "sender" is user-0, so
+// its room (suffix 0) is where we measure end-to-end latency.
+const roomFor = (i: number): string => (ROOMS > 1 ? `${ROOM}-${i % ROOMS}` : ROOM);
 
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 const pct = (sorted: number[], p: number): number =>
@@ -28,7 +44,8 @@ const pct = (sorted: number[], p: number): number =>
 
 async function run(): Promise<void> {
   console.log(
-    `Load test -> ${URL}\n  users=${USERS} room=${ROOM} duration=${DURATION_MS}ms moveHz=${MOVE_HZ}\n`,
+    `Load test -> ${URL}\n  users=${USERS} rooms=${ROOMS} ` +
+      `(~${Math.ceil(USERS / ROOMS)}/room) duration=${DURATION_MS}ms moveHz=${MOVE_HZ}\n`,
   );
 
   const clients: Array<{ socket: Socket; userId: string }> = [];
@@ -41,40 +58,45 @@ async function run(): Promise<void> {
   let senderLastEmit = 0;
   const SENDER_ID = 'user-0';
 
-  // ---- connect all users ----
-  const t0 = Date.now();
-  await Promise.all(
-    Array.from({ length: USERS }, (_, i) => {
-      return new Promise<void>((resolve) => {
-        const userId = `user-${i}`;
-        const socket = ioClient(URL, { transports: ['websocket'], reconnection: false });
+  const connectOne = (i: number): Promise<void> =>
+    new Promise<void>((resolve) => {
+      const userId = `user-${i}`;
+      const socket = ioClient(URL, { transports: ['websocket'], reconnection: false });
 
-        socket.on('connect', () => {
-          socket.emit(EVENTS.JOIN, { roomId: ROOM, userId }, (ack: JoinAck) => {
-            if (ack?.ok) connected += 1;
-            else failed += 1;
-            resolve();
-          });
-        });
-
-        socket.on('connect_error', () => {
-          failed += 1;
+      socket.on('connect', () => {
+        socket.emit(EVENTS.JOIN, { roomId: roomFor(i), userId }, (ack: JoinAck) => {
+          if (ack?.ok) connected += 1;
+          else failed += 1;
           resolve();
         });
-
-        // Every client counts broadcasts; receivers of the sender's moves
-        // measure latency against the shared emit timestamp.
-        socket.on(EVENTS.MOVED, (m: { id: string }) => {
-          received += 1;
-          if (m.id === SENDER_ID && senderLastEmit) {
-            latencies.push(Date.now() - senderLastEmit);
-          }
-        });
-
-        clients.push({ socket, userId });
       });
-    }),
-  );
+
+      socket.on('connect_error', () => {
+        failed += 1;
+        resolve();
+      });
+
+      // Every client counts broadcasts; receivers of the sender's moves measure
+      // latency against the shared emit timestamp.
+      socket.on(EVENTS.MOVED, (m: { id: string }) => {
+        received += 1;
+        if (m.id === SENDER_ID && senderLastEmit) {
+          latencies.push(Date.now() - senderLastEmit);
+        }
+      });
+
+      clients.push({ socket, userId });
+    });
+
+  // ---- connect all users, ramped in batches to avoid a connect thundering herd ----
+  const t0 = Date.now();
+  for (let start = 0; start < USERS; start += CONNECT_BATCH) {
+    const batch = Array.from(
+      { length: Math.min(CONNECT_BATCH, USERS - start) },
+      (_, k) => connectOne(start + k),
+    );
+    await Promise.all(batch);
+  }
   console.log(`Connected ${connected}/${USERS} (failed ${failed}) in ${Date.now() - t0}ms\n`);
 
   // ---- drive cursor movement ----
