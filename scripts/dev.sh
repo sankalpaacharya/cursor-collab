@@ -110,9 +110,19 @@ do_e2e() {
 do_e2e_demo() {
   ensure_installed
   ensure_playwright_browser
-  warn "Opening real browser windows — needs a desktop/display."
-  info "Running the E2E visual demo (watch the cursors move)…"
-  exec pnpm test:e2e:demo
+
+  local n="${DEMO_USERS:-}"
+  if [[ -z "$n" && -t 0 ]]; then
+    read -rp "  How many cursors to spawn? [3]: " n
+  fi
+  n="${n:-3}"
+  [[ "$n" =~ ^[0-9]+$ ]] || die "expected a number, got: $n"
+  (( n >= 1 )) || die "need at least 1 cursor"
+
+  warn "Opening $n real browser windows — needs a desktop/display."
+  (( n > 8 )) && warn "$n browsers is heavy on one machine; movement may lag (that's the machine, not the app)."
+  info "Running the E2E visual demo with $n cursors…"
+  exec env DEMO_USERS="$n" pnpm test:e2e:demo
 }
 
 port_in_use() { (exec 3<>"/dev/tcp/127.0.0.1/$1") 2>/dev/null && exec 3>&- && return 0 || return 1; }

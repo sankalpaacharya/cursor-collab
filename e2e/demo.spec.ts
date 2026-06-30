@@ -2,10 +2,10 @@ import { test, expect, type Page } from '@playwright/test';
 
 test('multiple cursors moving (visual demo)', async ({ browser }) => {
   test.skip(!process.env.DEMO, 'visual demo, run with DEMO=1 (see test:e2e:demo)');
-  test.setTimeout(90_000);
 
   const room = 'demo';
-  const count = 3;
+  const count = Math.max(1, Number(process.env.DEMO_USERS ?? 3));
+  test.setTimeout(60_000 + count * 4_000);
   const pages: Page[] = [];
 
   for (let i = 0; i < count; i += 1) {
