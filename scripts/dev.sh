@@ -238,8 +238,9 @@ menu() {
   printf "    %s2%s  Run on Docker  %s(full stack: Redis + backends + Caddy)%s\n" "$GREEN" "$NC" "$DIM" "$NC"
   printf "    %s3%s  Run tests      %s(unit + integration)%s\n" "$GREEN" "$NC" "$DIM" "$NC"
   printf "    %s4%s  Run E2E tests  %s(real browsers, multi-user)%s\n" "$GREEN" "$NC" "$DIM" "$NC"
+  printf "    %s5%s  E2E demo       %s(watch cursors move, needs a display)%s\n" "$GREEN" "$NC" "$DIM" "$NC"
   printf "    %sq%s  Quit\n\n" "$GREEN" "$NC"
-  printf "  %sMore: ./start --help  (swarm, e2e demo, setup-only)%s\n\n" "$DIM" "$NC"
+  printf "  %sMore: ./start --help  (swarm, setup-only)%s\n\n" "$DIM" "$NC"
 
   if [[ ! -t 0 ]]; then
     info "Non-interactive shell — defaulting to: Setup + start dev"
@@ -255,6 +256,7 @@ menu() {
     2) do_docker ;;
     3) do_test ;;
     4) do_e2e ;;
+    5) do_e2e_demo ;;
     q|Q) info "Bye."; exit 0 ;;
     *) die "invalid choice: $choice" ;;
   esac
