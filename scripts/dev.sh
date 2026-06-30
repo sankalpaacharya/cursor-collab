@@ -24,7 +24,11 @@ Live Cursors — interactive setup & run.
   ./start --dev           Setup if needed, then run backend + client.
   ./start --install       Install dependencies only.
   ./start --docker        Full topology (Redis + 2 backends + Caddy).
+  ./start --swarm         Build images + deploy the Swarm stack (scaled).
+  ./start --swarm-down    Remove the Swarm stack.
   ./start --test          Run the test suite.
+  ./start --e2e           Run end-to-end browser tests.
+  ./start --e2e-demo      Watch cursors move in real browsers.
   ./start --help
 
 Local dev runs Redis (reusing one on :6379 or starting a container), the
@@ -91,6 +95,26 @@ do_test() {
   exec pnpm test
 }
 
+ensure_playwright_browser() {
+  info "Ensuring Playwright browser is installed…"
+  pnpm exec playwright install chromium
+}
+
+do_e2e() {
+  ensure_installed
+  ensure_playwright_browser
+  info "Running E2E tests (real browsers, multi-user)…"
+  exec pnpm test:e2e
+}
+
+do_e2e_demo() {
+  ensure_installed
+  ensure_playwright_browser
+  warn "Opening real browser windows — needs a desktop/display."
+  info "Running the E2E visual demo (watch the cursors move)…"
+  exec pnpm test:e2e:demo
+}
+
 port_in_use() { (exec 3<>"/dev/tcp/127.0.0.1/$1") 2>/dev/null && exec 3>&- && return 0 || return 1; }
 
 do_docker() {
@@ -104,6 +128,48 @@ do_docker() {
   info "Starting full topology (Redis + 2 backends + Caddy gateway)…"
   info "App will be available at ${BOLD}http://localhost:${port}${NC}"
   GATEWAY_PORT="$port" exec docker compose up --build
+}
+
+STACK_NAME="cursors"
+
+swarm_active() { [[ "$(docker info --format '{{.Swarm.LocalNodeState}}' 2>/dev/null)" == "active" ]]; }
+
+do_swarm() {
+  require_node
+  command -v docker >/dev/null || die "docker is not installed"
+  local port="${GATEWAY_PORT:-8080}"
+  if port_in_use "$port"; then
+    die "Port $port is in use (is 'docker compose' still up? run: docker compose down), or pick another: GATEWAY_PORT=9090 ./start --swarm"
+  fi
+  banner
+  info "Building images…"
+  docker build -t cursor-backend:latest ./server
+  docker build -t cursor-gateway:latest -f caddy/Dockerfile .
+
+  if swarm_active; then
+    ok "Swarm already active."
+  else
+    info "Initialising a one-node swarm…"
+    docker swarm init >/dev/null
+    ok "Swarm ready."
+  fi
+
+  info "Deploying stack '${STACK_NAME}' (1 redis, 3 backends, 1 gateway)…"
+  GATEWAY_PORT="$port" docker stack deploy -c docker-stack.yml --resolve-image=never "$STACK_NAME"
+
+  printf "\n"
+  ok "Deployed. App: ${BOLD}http://localhost:${port}${NC}"
+  printf "  %sstatus :%s docker service ls\n" "$DIM" "$NC"
+  printf "  %sscale  :%s docker service scale ${STACK_NAME}_backend=6\n" "$DIM" "$NC"
+  printf "  %sstop   :%s ./start --swarm-down\n\n" "$DIM" "$NC"
+  warn "The swarm keeps running after this exits. Tear it down with: ./start --swarm-down"
+}
+
+do_swarm_down() {
+  command -v docker >/dev/null || die "docker is not installed"
+  info "Removing stack '${STACK_NAME}'…"
+  docker stack rm "$STACK_NAME" >/dev/null 2>&1 || true
+  ok "Stack removed. (Leave the swarm entirely with: docker swarm leave --force)"
 }
 
 REDIS_CONTAINER="cursor-redis"
@@ -172,7 +238,10 @@ menu() {
   printf "    %s2%s  Setup only          %s(install dependencies)%s\n" "$GREEN" "$NC" "$DIM" "$NC"
   printf "    %s3%s  Start dev           %s(skip install, just run)%s\n" "$GREEN" "$NC" "$DIM" "$NC"
   printf "    %s4%s  Docker (full)       %s(Redis + 2 backends + Caddy → :8080)%s\n" "$GREEN" "$NC" "$DIM" "$NC"
-  printf "    %s5%s  Run tests\n" "$GREEN" "$NC"
+  printf "    %s5%s  Docker Swarm        %s(build + deploy 3 replicas → :8080)%s\n" "$GREEN" "$NC" "$DIM" "$NC"
+  printf "    %s6%s  Run tests           %s(unit + integration)%s\n" "$GREEN" "$NC" "$DIM" "$NC"
+  printf "    %s7%s  E2E tests           %s(real browsers, multi-user)%s\n" "$GREEN" "$NC" "$DIM" "$NC"
+  printf "    %s8%s  E2E demo            %s(watch cursors move, needs a display)%s\n" "$GREEN" "$NC" "$DIM" "$NC"
   printf "    %sq%s  Quit\n\n" "$GREEN" "$NC"
 
   if [[ ! -t 0 ]]; then
@@ -189,7 +258,10 @@ menu() {
     2) do_install ;;
     3) SKIP_INSTALL=true; do_dev ;;
     4) do_docker ;;
-    5) do_test ;;
+    5) do_swarm ;;
+    6) do_test ;;
+    7) do_e2e ;;
+    8) do_e2e_demo ;;
     q|Q) info "Bye."; exit 0 ;;
     *) die "invalid choice: $choice" ;;
   esac
@@ -201,7 +273,11 @@ for arg in "$@"; do
     --dev)      ACTION="dev" ;;
     --install|--setup) ACTION="install" ;;
     --docker)   ACTION="docker" ;;
+    --swarm)    ACTION="swarm" ;;
+    --swarm-down) ACTION="swarm-down" ;;
     --test)     ACTION="test" ;;
+    --e2e)      ACTION="e2e" ;;
+    --e2e-demo) ACTION="e2e-demo" ;;
     -h|--help)  usage; exit 0 ;;
     *) die "unknown option: $arg (try --help)" ;;
   esac
@@ -211,6 +287,10 @@ case "$ACTION" in
   dev)     banner; do_dev ;;
   install) do_install ;;
   docker)  do_docker ;;
+  swarm)   banner; do_swarm ;;
+  swarm-down) do_swarm_down ;;
   test)    do_test ;;
+  e2e)     do_e2e ;;
+  e2e-demo) do_e2e_demo ;;
   "")      menu ;;
 esac
