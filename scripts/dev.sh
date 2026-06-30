@@ -133,7 +133,6 @@ ensure_redis() {
 }
 
 DEV_CLEANED=0
-CONCURRENTLY_PID=""
 
 do_dev() {
   ensure_installed
@@ -141,19 +140,15 @@ do_dev() {
 
   printf "%s%sStarting…%s\n" "$BOLD" "$GREEN" "$NC"
   printf "  backend  %shttp://localhost:3001%s  (store: redis)\n" "$DIM" "$NC"
-  printf "  client   %shttp://localhost:5173%s  %s← open this, in two windows%s\n\n" \
+  printf "  client   %shttp://localhost:5173%s  %s← open this, in two windows%s\n" \
     "$DIM" "$NC" "$BOLD" "$NC"
+  printf "  %sTUI: ↑/↓ pick a process · enter focus · r restart · x stop · q quit%s\n\n" "$DIM" "$NC"
 
-  node_modules/.bin/concurrently \
-    --kill-others \
-    --names "server,client" \
-    --prefix-colors "cyan,magenta" \
-    "cd server && exec node --watch src/bootstrap/index.ts" \
-    "cd client && exec node_modules/.bin/vite" &
-  CONCURRENTLY_PID=$!
-
+  # mprocs is an interactive TUI, so it runs in the FOREGROUND and owns the
+  # terminal. It supervises the server/client panes (see mprocs.yaml) and tears
+  # them down on quit; the trap then stops Redis if we started it.
   trap dev_cleanup INT TERM EXIT
-  wait "$CONCURRENTLY_PID"
+  node_modules/.bin/mprocs
   dev_cleanup
 }
 
@@ -162,13 +157,8 @@ dev_cleanup() {
   DEV_CLEANED=1
   trap - INT TERM EXIT
 
-  if [[ -n "$CONCURRENTLY_PID" ]]; then
-    printf "\n"; info "Shutting down…"
-    kill -INT "$CONCURRENTLY_PID" 2>/dev/null || true
-    wait "$CONCURRENTLY_PID" 2>/dev/null || true
-  fi
   if [[ "$STARTED_REDIS" == "true" ]]; then
-    info "Stopping Redis…"
+    printf "\n"; info "Stopping Redis…"
     docker stop "$REDIS_CONTAINER" >/dev/null 2>&1 || true
   fi
 }

@@ -23,6 +23,6 @@
     ]
   },
   "devDependencies": {
-    "concurrently": "^9.1.2"
+    "mprocs": "^0.9.6"
   }
 }
