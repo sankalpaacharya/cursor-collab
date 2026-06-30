@@ -2,7 +2,7 @@ import { test, expect, type Page } from '@playwright/test';
 
 test('multiple cursors moving (visual demo)', async ({ browser }) => {
   test.skip(!process.env.DEMO, 'visual demo, run with DEMO=1 (see test:e2e:demo)');
-  test.setTimeout(60_000);
+  test.setTimeout(90_000);
 
   const room = 'demo';
   const count = 3;
@@ -18,9 +18,10 @@ test('multiple cursors moving (visual demo)', async ({ browser }) => {
 
   const boxes = await Promise.all(pages.map((p) => p.locator('.workspace').boundingBox()));
 
-  const steps = 250;
+  const steps = 90;
+  const loops = 5;
   for (let i = 0; i < steps; i += 1) {
-    const t = (i / steps) * Math.PI * 6;
+    const t = (i / steps) * Math.PI * 2 * loops;
     await Promise.all(
       pages.map((page, idx) => {
         const box = boxes[idx];
@@ -32,6 +33,6 @@ test('multiple cursors moving (visual demo)', async ({ browser }) => {
         return page.mouse.move(cx + Math.cos(t + phase) * r, cy + Math.sin(t + phase) * r);
       }),
     );
-    await pages[0].waitForTimeout(40);
+    await pages[0].waitForTimeout(16);
   }
 });

@@ -234,15 +234,12 @@ dev_cleanup() {
 menu() {
   banner
   printf "  What would you like to do?\n\n"
-  printf "    %s1%s  Setup + start dev   %s(install if needed, run backend + client)%s\n" "$GREEN" "$NC" "$DIM" "$NC"
-  printf "    %s2%s  Setup only          %s(install dependencies)%s\n" "$GREEN" "$NC" "$DIM" "$NC"
-  printf "    %s3%s  Start dev           %s(skip install, just run)%s\n" "$GREEN" "$NC" "$DIM" "$NC"
-  printf "    %s4%s  Docker (full)       %s(Redis + 2 backends + Caddy → :8080)%s\n" "$GREEN" "$NC" "$DIM" "$NC"
-  printf "    %s5%s  Docker Swarm        %s(build + deploy 3 replicas → :8080)%s\n" "$GREEN" "$NC" "$DIM" "$NC"
-  printf "    %s6%s  Run tests           %s(unit + integration)%s\n" "$GREEN" "$NC" "$DIM" "$NC"
-  printf "    %s7%s  E2E tests           %s(real browsers, multi-user)%s\n" "$GREEN" "$NC" "$DIM" "$NC"
-  printf "    %s8%s  E2E demo            %s(watch cursors move, needs a display)%s\n" "$GREEN" "$NC" "$DIM" "$NC"
+  printf "    %s1%s  Run locally    %s(installs if needed, backend + client)%s\n" "$GREEN" "$NC" "$DIM" "$NC"
+  printf "    %s2%s  Run on Docker  %s(full stack: Redis + backends + Caddy)%s\n" "$GREEN" "$NC" "$DIM" "$NC"
+  printf "    %s3%s  Run tests      %s(unit + integration)%s\n" "$GREEN" "$NC" "$DIM" "$NC"
+  printf "    %s4%s  Run E2E tests  %s(real browsers, multi-user)%s\n" "$GREEN" "$NC" "$DIM" "$NC"
   printf "    %sq%s  Quit\n\n" "$GREEN" "$NC"
+  printf "  %sMore: ./start --help  (swarm, e2e demo, setup-only)%s\n\n" "$DIM" "$NC"
 
   if [[ ! -t 0 ]]; then
     info "Non-interactive shell — defaulting to: Setup + start dev"
@@ -255,13 +252,9 @@ menu() {
   printf "\n"
   case "$choice" in
     1) do_dev ;;
-    2) do_install ;;
-    3) SKIP_INSTALL=true; do_dev ;;
-    4) do_docker ;;
-    5) do_swarm ;;
-    6) do_test ;;
-    7) do_e2e ;;
-    8) do_e2e_demo ;;
+    2) do_docker ;;
+    3) do_test ;;
+    4) do_e2e ;;
     q|Q) info "Bye."; exit 0 ;;
     *) die "invalid choice: $choice" ;;
   esac

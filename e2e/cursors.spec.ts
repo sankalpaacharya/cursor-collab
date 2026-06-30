@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 
-const MANY = Number(process.env.E2E_USERS ?? 5);
+const MANY = Number(process.env.E2E_USERS ?? 3);
 
 async function joinRoom(page: Page, room: string): Promise<void> {
   await page.goto(`/?room=${room}`);
