@@ -3,7 +3,7 @@ import { config } from '../../shared/config.ts';
 import { logger } from '../../shared/logger.ts';
 import { colorFor, labelFor } from './identity.ts';
 import { EVENTS } from './events.ts';
-import { validateJoin, validateMove } from './validate.ts';
+import { validateJoin, validateMove, validateName } from './validate.ts';
 import type {
   ClientToServerEvents,
   CursorUser,
@@ -70,6 +70,24 @@ export function registerCursorHandlers(io: TypedServer, store: PresenceStore): (
         x: user.x,
         y: user.y,
       });
+    });
+
+    socket.on(EVENTS.RENAME, async (payload, ack) => {
+      const user = socket.data.user;
+      const roomId = socket.data.roomId;
+      if (!user || !roomId) return;
+
+      user.name = validateName(payload) || labelFor(user.id);
+      user.lastSeen = Date.now();
+
+      try {
+        await store.upsertUser(roomId, user);
+        socket.to(roomId).emit(EVENTS.RENAMED, { id: user.id, name: user.name });
+        if (typeof ack === 'function') ack({ name: user.name });
+        logger.info({ roomId, userId: user.id, name: user.name }, 'user renamed');
+      } catch (err) {
+        logger.error({ err: (err as Error).message, roomId, userId: user.id }, 'rename failed');
+      }
     });
 
     const leave = async (reason: string): Promise<void> => {

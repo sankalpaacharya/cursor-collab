@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { HugeiconsIcon } from '@hugeicons/react';
 import {
   CursorMagicSelection02Icon,
-  HashtagIcon,
   UserCircleIcon,
 } from '@hugeicons/core-free-icons';
 import {
@@ -53,10 +52,6 @@ export default function App() {
         </div>
 
         <div className="controls">
-          <div className="field" title="Set ?room=NAME in the URL to change rooms">
-            <HugeiconsIcon icon={HashtagIcon} size={16} strokeWidth={2} />
-            <input value={room} readOnly aria-label="Room" />
-          </div>
           <div className="field">
             <HugeiconsIcon icon={UserCircleIcon} size={16} strokeWidth={2} />
             <input

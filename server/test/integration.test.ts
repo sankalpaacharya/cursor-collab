@@ -126,6 +126,26 @@ test('disconnect broadcasts a leave to remaining peers', async () => {
   b.close();
 });
 
+test('rename updates the user and notifies peers', async () => {
+  const a = await connect();
+  const b = await connect();
+  await join(a, { roomId: 'room6', userId: 'alice' });
+  await join(b, { roomId: 'room6', userId: 'bob' });
+
+  const renamedPromise = once<{ id: string; name: string }>(b, EVENTS.RENAMED);
+  const ack = await new Promise<{ name: string }>((resolve) =>
+    a.emit(EVENTS.RENAME, { name: 'Alice New' }, resolve),
+  );
+
+  assert.equal(ack.name, 'Alice New');
+  const renamed = await renamedPromise;
+  assert.equal(renamed.id, 'alice');
+  assert.equal(renamed.name, 'Alice New');
+
+  a.close();
+  b.close();
+});
+
 test('invalid join is rejected with an error ack', async () => {
   const a = await connect();
   const ack = await join(a, { roomId: 'bad room!!', userId: 'alice' });

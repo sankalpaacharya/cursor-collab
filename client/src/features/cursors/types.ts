@@ -26,12 +26,14 @@ export interface ServerToClientEvents {
   'cursor:joined': (data: { user: CursorUser }) => void;
   'cursor:moved': (data: { id: string; x: number; y: number }) => void;
   'cursor:left': (data: { id: string }) => void;
+  'cursor:renamed': (data: { id: string; name: string }) => void;
 }
 
 export interface ClientToServerEvents {
   'cursor:join': (payload: JoinPayload, ack: (res: JoinAck) => void) => void;
   'cursor:move': (payload: { x: number; y: number }) => void;
   'cursor:leave': () => void;
+  'cursor:rename': (payload: { name?: string }, ack: (res: { name: string }) => void) => void;
 }
 
 export type ConnectionStatus = 'connecting' | 'connected' | 'reconnecting' | 'error';

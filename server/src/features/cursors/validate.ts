@@ -23,6 +23,12 @@ export function validateJoin(payload: unknown): Result<JoinPayload> {
   return { ok: true, value: { roomId, userId, name } };
 }
 
+export function validateName(payload: unknown): string {
+  if (!payload || typeof payload !== 'object') return '';
+  const p = payload as Record<string, unknown>;
+  return typeof p.name === 'string' ? p.name.replace(CONTROL_RE, '').trim().slice(0, 32) : '';
+}
+
 export function validateMove(payload: unknown): Result<MovePayload> {
   if (!payload || typeof payload !== 'object') return { ok: false, error: 'invalid payload' };
   const { x, y } = payload as Record<string, unknown>;
