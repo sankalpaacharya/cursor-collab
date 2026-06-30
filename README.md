@@ -41,10 +41,10 @@ from a fresh clone, `./start` bootstraps pnpm, installs dependencies, and runs t
 pnpm install
 ```
 
-2. start docker services
+2. start Redis (the backend connects to it)
 
 ```bash
-docker compose up all
+docker compose up -d redis
 ```
 
 3. start the backend (one terminal)

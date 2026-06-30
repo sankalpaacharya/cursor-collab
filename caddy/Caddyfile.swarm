@@ -1,23 +1,11 @@
 :80 {
 	handle /socket.io/* {
-		reverse_proxy {
-			dynamic a {
-				name tasks.backend
-				port 3001
-				refresh 5s
-			}
-		}
+		reverse_proxy backend:3001
 	}
 
 	@probes path /healthz /stats
 	handle @probes {
-		reverse_proxy {
-			dynamic a {
-				name tasks.backend
-				port 3001
-				refresh 5s
-			}
-		}
+		reverse_proxy backend:3001
 	}
 
 	handle {
