@@ -4,7 +4,8 @@
 FROM node:24-alpine
 
 WORKDIR /app
-RUN corepack enable
+# Pin pnpm to the project's version for reproducible builds.
+RUN corepack enable && corepack prepare pnpm@10.29.3 --activate
 
 # Install production dependencies first to leverage Docker layer caching.
 # (Built standalone — the workspace lockfile lives at the repo root.)

@@ -21,8 +21,9 @@
 		}
 	}
 
-	# Health / metrics passthrough.
-	handle /healthz /stats {
+	# Health / metrics passthrough. (handle takes one matcher, so name it.)
+	@probes path /healthz /stats
+	handle @probes {
 		reverse_proxy backend1:3001 backend2:3001 {
 			lb_policy cookie
 		}

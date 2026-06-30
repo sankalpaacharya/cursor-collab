@@ -4,6 +4,8 @@
   "private": true,
   "description": "Real-time shared-workspace cursor tracking (Express + Socket.IO + Redis, React + Vite, TypeScript)",
   "scripts": {
+    "dev": "bash scripts/dev.sh",
+    "dev:docker": "bash scripts/dev.sh --docker",
     "dev:server": "pnpm --filter cursor-server dev",
     "dev:client": "pnpm --filter cursor-client dev",
     "build:client": "pnpm --filter cursor-client build",

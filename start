@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+#
+# Live Cursors — the single command.
+#
+#   ./start            Set up everything and run it (backend + client).
+#   ./start --docker   Set up and run the full multi-server topology.
+#
+# From a fresh clone with only Node installed, this bootstraps pnpm, installs all
+# dependencies, and starts the app. Press Ctrl-C to stop.
+
+exec bash "$(dirname "$0")/scripts/dev.sh" "$@"
