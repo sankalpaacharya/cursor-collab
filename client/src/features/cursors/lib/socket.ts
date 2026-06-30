@@ -6,7 +6,7 @@ export type AppSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 export function createSocket(): AppSocket {
   const url = import.meta.env.VITE_SERVER_URL || undefined;
   return io(url, {
-    transports: ['websocket', 'polling'],
+    transports: ['websocket'],
     reconnection: true,
     reconnectionDelay: 500,
     reconnectionDelayMax: 4000,

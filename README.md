@@ -67,13 +67,13 @@ pnpm dev:client   # → :5173
 
 we are using caddy as the gateway and fastify as the backend framework, with react on the frontend.
 
-when a user first visits the site there is no cookie set, so caddy assigns them to a backend at random. on return visits the cookie pins them to the same backend. this matters because socket.io's handshake has to keep hitting the same server. if it bounces to another backend mid-handshake the connection breaks.
+caddy spreads users across the backends round-robin. because we use websocket-only connections, each client opens a single long-lived connection to whichever backend it lands on and stays there for the whole session. so we don't need sticky sessions or cookies. caddy just health-checks the backends and stops routing to any that go down.
 
 this is set in the caddy config:
 ```
-	reverse_proxy backend1:3001 backend2:3001 {
-			lb_policy cookie
-		}
+reverse_proxy backend1:3001 backend2:3001 {
+    health_uri /healthz
+}
 ```
 
 caddy also serves the built react app, so there's a single entry point for both the client and the websockets.
@@ -87,7 +87,6 @@ rn caddy serves a built SPA react app just for now but we can deploy it in cloud
 ## Folder structure
 
 organised feature-wise (vertical slices). reference: [Vertical Codebase](https://tkdodo.eu/blog/the-vertical-codebase)
-
 
 
 ## Test it
@@ -107,4 +106,4 @@ URL=http://localhost:8080 USERS=1000 ROOMS=10 pnpm loadtest
 
 ## Deploying multiple servers
 
-See [DEPLOY.md](DEPLOY.md). It covers the local Docker topology, scaling with Docker Swarm (one machine or several), and what a real deployment needs: shared Redis, a sticky-session load balancer, and health checks.
+See [DEPLOY.md](DEPLOY.md). It covers the local Docker topology, scaling with Docker Swarm (one machine or several), and what a real deployment needs: shared Redis, a websocket-aware load balancer, and health checks.

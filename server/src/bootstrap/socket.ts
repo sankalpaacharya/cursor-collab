@@ -51,7 +51,7 @@ export async function createSocketServer(
     cors: corsOptions,
     pingInterval: 10_000,
     pingTimeout: 8_000,
-    transports: ['websocket', 'polling'],
+    transports: ['websocket'],
   });
 
   const closeAdapter = await attachRedisAdapter(io, useRedis);

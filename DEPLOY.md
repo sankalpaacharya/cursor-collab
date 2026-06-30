@@ -1,93 +1,82 @@
 # Deploying
 
-The app is a load balancer in front of a pool of identical stateless backends that share one Redis.
+One load balancer, a pool of stateless backends, one shared Redis.
 
 ```
-browser  ->  caddy (load balancer)  ->  backend
-                                        backend   ->  redis
-                                        backend
+browser  ->  caddy (LB)  ->  backend x N  ->  redis
 ```
 
-Wherever you run it, you need the same three things:
+You always need three things:
 
-1. **one redis** every backend points at (`REDIS_URL`)
-2. **N backend replicas** (they hold no state, so add or kill them freely)
-3. **a load balancer** with sticky sessions and a `/healthz` health check
-
-Sticky sessions matter because Socket.IO's handshake must keep hitting the same backend. Caddy does this with a cookie.
+- one **redis** all backends share (`REDIS_URL`)
+- N **backend replicas** (stateless, kill them freely)
+- a **load balancer** that speaks WebSockets, with a `/healthz` check
 
 ---
 
-## One machine (Docker Compose)
-
-For dev, demos, or a small deployment. Brings up redis, two backends, and caddy:
+## One machine
 
 ```bash
 docker compose up --build      # -> http://localhost:8080
 ```
 
-That is the whole app on one box. To grow, use a bigger box, or move to Swarm.
+Redis + 2 backends + caddy on one box. Good for dev and small deploys.
 
 ---
 
-## Many machines (Docker Swarm)
-
-Swarm runs N replicas and spreads them across machines. It ships with Docker, no extra tooling.
-
-### On one machine
+## Many machines (Swarm)
 
 ```bash
-# build the images
+# build images
 docker build -t cursor-backend:latest ./server
 docker build -t cursor-gateway:latest -f caddy/Dockerfile .
 
-# start a one-node swarm and deploy
+# deploy
 docker swarm init
 docker stack deploy -c docker-stack.yml --resolve-image=never cursors
 
-# scale anytime, no restart needed
+# scale anytime, no restart
 docker service scale cursors_backend=6
 ```
 
-Caddy finds the replicas through Swarm's `tasks.backend` DNS and re-checks every few seconds, so scaling up or down needs no config change.
-
-Rule of thumb: Node uses about one CPU core per backend, so run **replicas ≈ vCPUs**.
-
-### Across several machines
-
-Same stack, more nodes. On each extra machine:
-
-```bash
-docker swarm join --token <worker-token> <manager-ip>:2377
-```
-
-Swarm schedules the replicas across all of them. Two changes for multi-node:
-
-1. push the images to a registry (e.g. ECR) and drop `--resolve-image=never`
-2. use a managed redis (ElastiCache, Upstash) instead of the bundled container
+- replicas spread across machines, no config change to scale
+- rule of thumb: replicas ≈ vCPUs
+- more machines: `docker swarm join` on each, push images to a registry, use managed redis
 
 ---
 
-## Production checklist
+## AWS (EC2 + Swarm)
 
-- **Managed redis.** The bundled redis is a single point of failure. Use a managed, highly-available one and point `REDIS_URL` at it.
-- **TLS** terminates at the load balancer. Backends speak plain HTTP behind it.
-- **Sticky sessions** on your load balancer (Caddy cookie, nginx `affinity: cookie`, or AWS ALB target-group stickiness).
-- **Health check** on `/healthz`.
+1. push images to **ECR**
+2. launch 3 **EC2s**, open ports `2377`, `7946`, `4789` between them
+3. `docker swarm init` on one, `docker swarm join` on the rest
+4. create **ElastiCache** redis, set `REDIS_URL`
+5. edit `docker-stack.yml`: ECR images, `mode: host` -> `ingress`
+6. `docker stack deploy -c docker-stack.yml cursors`
+7. **ALB** in front: `/healthz`, ACM cert for TLS (ALB speaks WebSockets natively)
+8. point **Route 53** at the ALB
 
-How it survives crashes: backends are stateless, so losing one loses nothing. The load balancer stops routing to an unhealthy replica, clients auto-reconnect to a healthy one and re-sync, and a TTL sweep clears cursors left behind by a dead replica.
+---
+
+## Checklist
+
+- **redis**: managed and HA (the bundled one is a single point of failure)
+- **TLS**: terminate at the load balancer
+- **websocket-only**: clients use one WebSocket, so plain round-robin works (no sticky sessions needed)
+- **health check**: `/healthz`
+
+Crash safety: backends are stateless, the LB drops unhealthy ones, clients auto-reconnect and re-sync, and a TTL sweep clears stale cursors.
 
 ---
 
 ## Config
 
-Backend env vars (full list in [`server/.env.example`](server/.env.example)):
-
 | Variable        | Default                  | Notes |
 | --------------- | ------------------------ | ----- |
 | `REDIS_URL`     | `redis://localhost:6379` | shared redis |
-| `REDIS_ENABLED` | `true`                   | `false` = single in-memory replica (no scaling) |
-| `CORS_ORIGIN`   | `*`                      | comma-separated origins, or `*` |
+| `REDIS_ENABLED` | `true`                   | `false` = single in-memory node |
+| `CORS_ORIGIN`   | `*`                      | allowed origins |
 | `PORT`          | `3001`                   | listen port |
+| `GATEWAY_PORT`  | `8080`                   | published gateway port |
 
-Compose and Swarm also read `GATEWAY_PORT` (default `8080`).
+Full list: [`server/.env.example`](server/.env.example).

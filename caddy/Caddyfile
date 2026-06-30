@@ -1,8 +1,6 @@
 :80 {
 	handle /socket.io/* {
 		reverse_proxy backend1:3001 backend2:3001 {
-			lb_policy cookie
-
 			health_uri /healthz
 			health_interval 10s
 			health_timeout 3s
@@ -11,9 +9,7 @@
 
 	@probes path /healthz /stats
 	handle @probes {
-		reverse_proxy backend1:3001 backend2:3001 {
-			lb_policy cookie
-		}
+		reverse_proxy backend1:3001 backend2:3001
 	}
 
 	handle {
