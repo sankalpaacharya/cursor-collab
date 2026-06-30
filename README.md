@@ -18,6 +18,47 @@
 </p>
 
 
+
+## Set Up
+
+from a fresh clone, `./start` bootstraps pnpm, installs dependencies, and runs the backend + client together:
+
+```bash
+./start
+```
+
+<p align="center">
+  <img src="assets/devcli.jpg" alt="The ./start interactive launcher menu" width="49%" />
+  <img src="assets/dev.jpg" alt="Backend and client running in the dev process dashboard" width="49%" />
+</p>
+
+
+### Manual Installation
+
+1. install dependencies
+
+```bash
+pnpm install
+```
+
+2. start docker services
+
+```bash
+docker compose up all
+```
+
+3. start the backend (one terminal)
+
+```bash
+pnpm dev:server   # → :3001
+```
+
+4. start the client (another terminal)
+
+```bash
+pnpm dev:client   # → :5173
+```
+
 ## Architecture Decision
 
 <p align="center">
@@ -48,53 +89,6 @@ rn caddy serves a built SPA react app just for now but we can deploy it in cloud
 organised feature-wise (vertical slices). reference: [Vertical Codebase](https://tkdodo.eu/blog/the-vertical-codebase)
 
 
-## Set Up
-
-from a fresh clone, `./start` bootstraps pnpm, installs dependencies, and runs the backend + client together:
-
-```bash
-./start
-```
-
-<p align="center">
-  <img src="assets/devcli.jpg" alt="The ./start interactive launcher menu" width="49%" />
-  <img src="assets/dev.jpg" alt="Backend and client running in the dev process dashboard" width="49%" />
-</p>
-
-
-For the full load-balanced topology (Redis, two backends, and a Caddy gateway) use:
-
-```bash
-./start --docker        # same as: docker compose up --build  → http://localhost:8080
-```
-
-### Running the pieces by hand
-
-1. install dependencies
-
-```bash
-pnpm install
-```
-
-2. start redis (the backend connects to `redis://localhost:6379` by default)
-
-```bash
-docker compose up -d redis
-```
-
-3. start the backend (one terminal)
-
-```bash
-pnpm dev:server   # → :3001
-```
-
-4. start the client (another terminal)
-
-```bash
-pnpm dev:client   # → :5173
-```
-
-open http://localhost:5173 in two windows and move your mouse. add `?room=design` to the url to pick a room.
 
 ## Test it
 
@@ -110,7 +104,6 @@ The load test simulates a crowd and measures real end-to-end latency, from a mou
 # start a server first, then:
 URL=http://localhost:8080 USERS=1000 ROOMS=10 pnpm loadtest
 ```
-
 
 ## Deploying multiple servers
 
