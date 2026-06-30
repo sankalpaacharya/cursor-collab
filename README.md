@@ -8,6 +8,10 @@
   Real-time shared workspace where everyone sees each other's cursor move live.
 </p>
 
+<p align="center">
+  <img src="docs/diagram.svg" alt="Architecture: clients → Caddy gateway → backend replicas → Redis" width="100%" />
+</p>
+
 ## Stack
 
 | Layer        | Tech |
