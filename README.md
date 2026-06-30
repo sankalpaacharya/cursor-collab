@@ -65,24 +65,33 @@ pnpm dev:client   # → :5173
   <img src="docs/diagram.svg" alt="Architecture: clients → Caddy gateway → backend replicas → Redis" width="100%" />
 </p>
 
-we are using caddy as the gateway and fastify as the backend framework, with react on the frontend.
+Let's follow a single cursor move and see what every box in that diagram is actually doing.
 
-caddy spreads users across the backends round-robin, each client opens a single long-lived connection to whichever backend it lands on and stays there for the whole session. caddy just health-checks the backends and stops routing to any that go down.
+**The client.** It's a plain React app. You move your mouse, it sends the position over a websocket. Now here's the thing, a mouse fires hundreds of events a second. If we sent all of them we'd be DDoSing our own server. So the client only sends about 60 a second, and the newest position wins. It also keeps everyone else's cursors in state and draws them on screen.
 
-this is set in the caddy config:
+**Caddy, the gateway.** This is the single front door. It does three jobs: serves the React app, spreads the websocket connections across the backends, and health-checks each backend so a dead one stops getting traffic.
+
+You might ask, don't we need sticky sessions so a client keeps hitting the same backend? Fair. But we use websocket-only connections, and a websocket is a single long-lived connection. It opens once to whatever backend it lands on and stays there. There's nothing to keep together across requests, so plain round-robin is enough. No cookies, no stickiness.
+
 ```
 reverse_proxy backend1:3001 backend2:3001 {
     health_uri /healthz
 }
 ```
 
-caddy also serves the built react app, so there's a single entry point for both the client and the websockets.
+**The backends.** Fastify + Socket.IO. For now we run two, but you can run as many as you want. The important part is they're stateless. They don't keep anything important in their own memory, all the shared state lives in Redis. That's the whole trick that lets us kill, restart, or add a backend whenever we want and nobody notices more than a quick reconnect.
 
-for now we run 2 backend containers, `backend1` and `backend2`, but it can be scaled to as many as we want. once a user hits a backend we store their session in redis so every backend can read it. redis does one more job too: it relays cursor moves between backends over pub/sub, so a move made by someone on `backend1` still reaches users connected to `backend2`. without that, people on different backends couldn't see each other.
+**Redis.** Here's where it gets interesting, because Redis is doing two completely separate jobs.
 
-we use docker swarm for now to keep deployment simple, but we can move to k8s later if it gets more complex.
+The first is fan-out. Say you're on backend1 and I'm on backend2. When you move, backend1 has never heard of me. So it shouts your move into Redis, every backend is listening, and backend2 hears it and passes it to me. Without this, people on different backends just wouldn't see each other.
 
-rn caddy serves a built SPA react app just for now but we can deploy it in cloudflare CDN later on if we want
+The second is presence. It's a shared list of who's in each room and where their cursor is. When someone new joins, they read this list and instantly see everyone already there, even the people sitting on other backends. The live fan-out only carries new moves, it can't tell a fresh joiner who was already in the room. That's what presence is for.
+
+**So what happens when a backend dies?** Nothing scary. The state is in Redis, not in the backend, so we lose nothing. Clients reconnect to another backend and re-sync. The only loose end is that a crashed backend can't clean up after itself, so its users would hang around as ghost cursors. A background sweep handles that, anything that hasn't checked in for 30 seconds gets removed.
+
+That's the whole system. Two backends or twenty, the picture is the same.
+
+We're on Docker Swarm for now to keep deployment simple, and we can move to k8s later if it ever needs it. And Caddy serves the React app today, but we could push that to a CDN like Cloudflare whenever we want.
 
 ## Folder structure
 
