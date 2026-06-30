@@ -1,4 +1,10 @@
 import { useEffect, useState } from 'react';
+import { HugeiconsIcon } from '@hugeicons/react';
+import {
+  CursorMagicSelection02Icon,
+  HashtagIcon,
+  UserCircleIcon,
+} from '@hugeicons/core-free-icons';
 import {
   useCursors,
   Workspace,
@@ -37,24 +43,30 @@ export default function App() {
     <div className="app">
       <header className="topbar">
         <div className="brand">
-          <span className="dot" />
-          Live Cursors
+          <HugeiconsIcon
+            className="brand-icon"
+            icon={CursorMagicSelection02Icon}
+            size={22}
+            strokeWidth={2}
+          />
+          Cursor Collab
         </div>
 
         <div className="controls">
-          <label className="field">
-            Room
-            <input value={room} readOnly title="Set ?room=NAME in the URL to change rooms" />
-          </label>
-          <label className="field">
-            Name
+          <div className="field" title="Set ?room=NAME in the URL to change rooms">
+            <HugeiconsIcon icon={HashtagIcon} size={16} strokeWidth={2} />
+            <input value={room} readOnly aria-label="Room" />
+          </div>
+          <div className="field">
+            <HugeiconsIcon icon={UserCircleIcon} size={16} strokeWidth={2} />
             <input
               value={name}
-              placeholder="auto"
+              placeholder="Your name"
+              aria-label="Your name"
               maxLength={32}
               onChange={(e) => setName(e.target.value)}
             />
-          </label>
+          </div>
           <span className={`status status-${status}`}>
             <span className="status-dot" />
             {STATUS_LABELS[status] ?? status}

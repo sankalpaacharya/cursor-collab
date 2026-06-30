@@ -1,4 +1,7 @@
+import { HugeiconsIcon } from '@hugeicons/react';
+import { UserMultiple02Icon } from '@hugeicons/core-free-icons';
 import type { CursorUser } from '../types';
+import { avatarUrl } from '../lib/avatar';
 
 interface UserListProps {
   self: CursorUser | null;
@@ -11,18 +14,23 @@ export function UserList({ self, peers }: UserListProps) {
   return (
     <div className="userlist">
       <h2>
-        In this room <span className="count">{everyone.length}</span>
+        <HugeiconsIcon icon={UserMultiple02Icon} size={16} strokeWidth={2} />
+        In this room
+        <span className="count">{everyone.length}</span>
       </h2>
       <ul>
-        {everyone.map((u) => (
-          <li key={u.id}>
-            <span className="swatch" style={{ background: u.color }} />
-            <span className="uname">
-              {u.name}
-              {self && u.id === self.id ? ' (you)' : ''}
-            </span>
-          </li>
-        ))}
+        {everyone.map((u) => {
+          const isSelf = !!self && u.id === self.id;
+          return (
+            <li key={u.id} className={isSelf ? 'is-self' : undefined}>
+              <img className="avatar" src={avatarUrl(u.id)} alt="" style={{ borderColor: u.color }} />
+              <span className="uname">
+                {u.name}
+                {isSelf && <span className="you"> (you)</span>}
+              </span>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

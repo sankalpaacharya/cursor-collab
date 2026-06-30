@@ -1,5 +1,6 @@
 import { memo } from 'react';
 import type { CursorUser } from '../types';
+import { avatarUrl } from '../lib/avatar';
 
 interface CursorProps {
   user: CursorUser;
@@ -23,6 +24,7 @@ function CursorComponent({ user, width, height }: CursorProps) {
         />
       </svg>
       <span className="cursor-label" style={{ background: user.color }}>
+        <img className="cursor-avatar" src={avatarUrl(user.id)} alt="" width={16} height={16} />
         {user.name}
       </span>
     </div>
