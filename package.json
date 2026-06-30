@@ -11,6 +11,8 @@
     "build:client": "pnpm --filter cursor-client build",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm --filter cursor-server test",
+    "test:e2e": "playwright test",
+    "test:e2e:install": "playwright install chromium",
     "loadtest": "pnpm --filter cursor-server loadtest"
   },
   "engines": {
@@ -23,6 +25,7 @@
     ]
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "mprocs": "^0.9.6"
   }
 }
