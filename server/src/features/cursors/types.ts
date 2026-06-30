@@ -1,22 +1,10 @@
-/**
- * Domain + wire-protocol types for the cursors feature.
- *
- * The `ClientToServerEvents` / `ServerToClientEvents` interfaces are used to
- * strongly type the Socket.IO server, so payloads and acks are checked at
- * compile time on both the emit and handler sides.
- */
-
-/** A participant and the current state of their cursor within a room. */
 export interface CursorUser {
   id: string;
   name: string;
   color: string;
-  /** Normalised coordinates in the range 0..1 (fraction of the workspace). */
   x: number;
   y: number;
-  /** Replica that currently owns this user's connection. */
   serverId: string;
-  /** Epoch ms of the last heartbeat/move; used for stale-presence sweeping. */
   lastSeen: number;
 }
 
@@ -51,7 +39,6 @@ export interface ServerToClientEvents {
   'cursor:left': (data: { id: string }) => void;
 }
 
-/** Per-socket state kept in memory on the owning replica. */
 export interface SocketData {
   user: CursorUser | null;
   roomId: string | null;

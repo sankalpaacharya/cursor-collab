@@ -8,8 +8,6 @@ import {
   type ConnectionStatus,
 } from './features/cursors';
 
-// Read the initial room from the URL (?room=...) so sharing a link drops people
-// into the same workspace; default to "lobby".
 function initialRoom(): string {
   const fromUrl = new URLSearchParams(window.location.search).get('room');
   return (fromUrl ?? 'lobby').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 64) || 'lobby';
@@ -28,7 +26,6 @@ export default function App() {
 
   const { self, peers, status, sendMove } = useCursors(room, name);
 
-  // Persist the name and keep the URL shareable for the current room.
   useEffect(() => storeName(name), [name]);
   useEffect(() => {
     const url = new URL(window.location.href);

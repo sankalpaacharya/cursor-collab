@@ -1,12 +1,3 @@
-/**
- * Deterministic visual identity for a user.
- *
- * Colour and label are derived from the (stable) userId so that the same user
- * is rendered consistently across every client and across reconnections — even
- * if they reconnect to a different replica that never saw their original join.
- */
-
-// A pleasant, high-contrast palette. 16 distinct hues is plenty for a workspace.
 const PALETTE = [
   '#EF4444', '#F97316', '#F59E0B', '#EAB308',
   '#84CC16', '#22C55E', '#10B981', '#14B8A6',
@@ -24,7 +15,6 @@ const ANIMALS = [
   'Wolf', 'Raven', 'Bison', 'Hawk', 'Moose', 'Seal', 'Crane', 'Orca',
 ];
 
-/** Small, fast, stable string hash (FNV-1a). */
 function hash(str: string): number {
   let h = 0x811c9dc5;
   for (let i = 0; i < str.length; i += 1) {

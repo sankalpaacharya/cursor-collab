@@ -9,8 +9,6 @@ import { MemoryPresenceStore } from '../src/features/presence/memory-store.ts';
 import { EVENTS } from '../src/features/cursors/events.ts';
 import type { JoinAck, JoinPayload } from '../src/features/cursors/types.ts';
 
-// These tests exercise the real handlers against the in-memory presence store,
-// so they need no Redis. Run with: pnpm test
 process.env.REDIS_ENABLED = 'false';
 
 let app: FastifyInstance;

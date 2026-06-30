@@ -3,22 +3,6 @@ import type { CursorUser } from '../cursors/types.ts';
 import type { PresenceStore } from './store.types.ts';
 import { createRedisClient } from '../../shared/redis.ts';
 
-/**
- * Redis-backed presence store — the source of truth for "who is in which room
- * and where their cursor is" across all replicas.
- *
- * Why Redis (and not just the Socket.IO adapter)?
- *   - The adapter fans out *live* events between replicas, but a client that
- *     joins replica B needs the *current* snapshot of peers who connected via
- *     replica A. That snapshot lives here.
- *   - When a replica crashes, its in-memory socket state is lost, but presence
- *     entries remain in Redis. The heartbeat/sweep mechanism reaps them so
- *     ghost cursors disappear within `presenceTtlMs`.
- *
- * Keys:
- *   cursor:rooms             SET   of active roomIds
- *   cursor:room:{roomId}     HASH  field = userId, value = JSON(user)
- */
 const ROOMS_KEY = 'cursor:rooms';
 const roomKey = (roomId: string): string => `cursor:room:${roomId}`;
 

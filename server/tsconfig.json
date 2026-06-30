@@ -6,10 +6,6 @@
     "lib": ["ES2023"],
     "types": ["node"],
 
-    // We type-check only; the code runs directly via Node's native TypeScript
-    // type stripping (Node >= 22.6 with --experimental-strip-types, default in
-    // Node >= 23). These two options let us import with explicit `.ts`
-    // extensions, which is what native stripping resolves.
     "noEmit": true,
     "allowImportingTsExtensions": true,
     "rewriteRelativeImportExtensions": true,

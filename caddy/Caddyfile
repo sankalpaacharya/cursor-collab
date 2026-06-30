@@ -1,27 +1,14 @@
-# Caddy is the single public entry point:
-#   - serves the built React client (static SPA)
-#   - load-balances Socket.IO traffic across the backend replicas
-#
-# WebSocket upgrades are handled automatically — no extra header config needed.
-
 :80 {
-	# Socket.IO (WebSocket + polling) -> load-balanced backends.
 	handle /socket.io/* {
 		reverse_proxy backend1:3001 backend2:3001 {
-			# Sticky sessions: pin each client to one replica so Socket.IO's
-			# polling handshake lands on the same backend every time. Cookie-based
-			# stickiness works even behind other proxies (unlike IP hashing).
 			lb_policy cookie
 
-			# Active health checks: stop routing to a dead/restarting replica,
-			# which makes rolling deploys and crash recovery seamless.
 			health_uri /healthz
 			health_interval 10s
 			health_timeout 3s
 		}
 	}
 
-	# Health / metrics passthrough. (handle takes one matcher, so name it.)
 	@probes path /healthz /stats
 	handle @probes {
 		reverse_proxy backend1:3001 backend2:3001 {
@@ -29,7 +16,6 @@
 		}
 	}
 
-	# Everything else: the static client, with SPA fallback to index.html.
 	handle {
 		root * /srv
 		try_files {path} /index.html

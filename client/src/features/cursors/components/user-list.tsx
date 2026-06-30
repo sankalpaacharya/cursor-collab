@@ -5,10 +5,6 @@ interface UserListProps {
   peers: CursorUser[];
 }
 
-/**
- * Sidebar roster: shows the local user plus every active peer, with their
- * assigned colour and label. Demonstrates that session/presence tracking works.
- */
 export function UserList({ self, peers }: UserListProps) {
   const everyone = [self, ...peers].filter(Boolean) as CursorUser[];
 

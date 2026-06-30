@@ -1,4 +1,3 @@
-// Wire protocol event names — kept in sync with server/src/socket/events.ts.
 export const EVENTS = {
   JOIN: 'cursor:join',
   MOVE: 'cursor:move',

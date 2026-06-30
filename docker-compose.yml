@@ -1,14 +1,3 @@
-# Full multi-server deployment, locally reproducible:
-#
-#   browser ──> gateway (caddy :8080) ──┬──> backend1 :3001 ─┐
-#                serves client +         └──> backend2 :3001 ─┴──> redis :6379
-#                load-balances ws                              (adapter + presence)
-#
-# Bring it up with:   docker compose up --build
-# Then open:          http://localhost:8080
-#
-# Kill a replica to see crash recovery:   docker compose stop backend1
-
 services:
   redis:
     image: redis:7-alpine

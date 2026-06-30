@@ -1,5 +1,3 @@
-// Wire-protocol types, mirrored from server/src/types.ts.
-
 export interface CursorUser {
   id: string;
   name: string;

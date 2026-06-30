@@ -24,12 +24,6 @@ export interface SocketServer {
   close: () => Promise<void>;
 }
 
-/**
- * Attaches the Redis adapter so that `emit`/`broadcast` calls reach clients on
- * *any* replica, not just the local one. This is the mechanism that makes
- * horizontal scaling work: replica A publishes a cursor move to Redis, and
- * replicas B, C, ... deliver it to their own clients. No-op when Redis is off.
- */
 async function attachRedisAdapter(io: TypedServer, useRedis: boolean): Promise<() => Promise<void>> {
   if (!useRedis) {
     logger.warn('redis adapter disabled — running as a single replica');
@@ -48,10 +42,6 @@ async function attachRedisAdapter(io: TypedServer, useRedis: boolean): Promise<(
   };
 }
 
-/**
- * Builds the Socket.IO server, attaches the Redis adapter for cross-replica
- * fan-out, and registers the cursor handlers.
- */
 export async function createSocketServer(
   httpServer: HttpServer,
   store: PresenceStore,
@@ -59,11 +49,8 @@ export async function createSocketServer(
 ): Promise<SocketServer> {
   const io: TypedServer = new Server(httpServer, {
     cors: corsOptions,
-    // Cursor updates are tiny and frequent; a snappy ping keeps dead-connection
-    // detection fast so ghost cursors are removed promptly.
     pingInterval: 10_000,
     pingTimeout: 8_000,
-    // Prefer websockets but allow polling as a fallback for restrictive networks.
     transports: ['websocket', 'polling'],
   });
 

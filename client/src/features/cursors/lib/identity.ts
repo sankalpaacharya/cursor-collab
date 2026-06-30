@@ -1,4 +1,3 @@
-
 const USER_ID_KEY = 'cursor:userId';
 const NAME_KEY = 'cursor:name';
 

@@ -1,15 +1,6 @@
 import type { CursorUser } from '../cursors/types.ts';
 import type { PresenceStore } from './store.types.ts';
 
-/**
- * In-memory presence store.
- *
- * Used when Redis is disabled (single replica, local dev, unit tests). It
- * implements the exact same async interface as the Redis store so the rest of
- * the application is agnostic to which backend is in use.
- *
- * State shape: rooms -> Map<roomId, Map<userId, user>>
- */
 export class MemoryPresenceStore implements PresenceStore {
   private rooms = new Map<string, Map<string, CursorUser>>();
 
@@ -49,7 +40,6 @@ export class MemoryPresenceStore implements PresenceStore {
     return [...this.rooms.keys()];
   }
 
-  /** Remove entries not seen since `now - ttlMs`. Returns removed pairs. */
   async sweepStale(
     ttlMs: number,
     now: number,

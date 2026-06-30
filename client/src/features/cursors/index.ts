@@ -1,5 +1,3 @@
-// Public surface of the cursors feature. App-level code imports from here
-// rather than reaching into individual files.
 export { useCursors } from './hooks/use-cursors';
 export { Workspace } from './components/workspace';
 export { UserList } from './components/user-list';

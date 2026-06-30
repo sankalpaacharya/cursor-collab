@@ -6,12 +6,6 @@ import { createPresenceStore } from '../features/presence/index.ts';
 import { createSocketServer, type SocketServer } from './socket.ts';
 import type { Stats } from '../features/health/routes.ts';
 
-/**
- * Decide the presence/fan-out backend. With REDIS_ENABLED=true (the default) we
- * REQUIRE Redis: if it is unreachable we fail fast with a clear error rather than
- * silently degrading to a single in-memory replica. REDIS_ENABLED=false is the
- * explicit opt-in to single-replica in-memory mode (used by the test suite).
- */
 async function resolveRedisMode(): Promise<boolean> {
   if (!config.redisEnabled) return false;
 

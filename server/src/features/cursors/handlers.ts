@@ -14,23 +14,6 @@ import type { PresenceStore } from '../presence/store.types.ts';
 
 type TypedServer = Server<ClientToServerEvents, ServerToClientEvents, Record<string, never>, SocketData>;
 
-/**
- * Registers all cursor-related socket handlers and the background presence
- * maintenance loops (heartbeat + stale sweep).
- *
- * Design notes
- * ------------
- * - The authoritative, up-to-the-millisecond cursor for a connected socket lives
- *   in `socket.data.user` (in memory). Live MOVE events are broadcast straight
- *   through the Redis adapter without touching the presence store, so the hot
- *   path does zero Redis writes.
- * - The presence store is written only on JOIN, on each heartbeat, and cleared on
- *   LEAVE/disconnect. It exists to give a *newly joining* peer an immediate
- *   snapshot of everyone already in the room (including those connected to other
- *   replicas) and to enable crash recovery via the sweep.
- *
- * @returns a cleanup function that stops the background loops.
- */
 export function registerCursorHandlers(io: TypedServer, store: PresenceStore): () => void {
   io.on('connection', (socket) => {
     logger.debug({ socketId: socket.id }, 'socket connected');
@@ -61,7 +44,6 @@ export function registerCursorHandlers(io: TypedServer, store: PresenceStore): (
         await store.upsertUser(roomId, user);
         const peers = (await store.getRoom(roomId)).filter((u) => u.id !== userId);
 
-        // Tell everyone else in the room (across all replicas) that we arrived.
         socket.to(roomId).emit(EVENTS.JOINED, { user });
 
         if (typeof ack === 'function') ack({ ok: true, self: user, peers });
@@ -74,7 +56,7 @@ export function registerCursorHandlers(io: TypedServer, store: PresenceStore): (
 
     socket.on(EVENTS.MOVE, (payload) => {
       const user = socket.data.user;
-      if (!user || !socket.data.roomId) return; // ignore moves before a successful join
+      if (!user || !socket.data.roomId) return;
 
       const result = validateMove(payload);
       if (!result.ok) return;
@@ -83,9 +65,6 @@ export function registerCursorHandlers(io: TypedServer, store: PresenceStore): (
       user.y = result.value.y;
       user.lastSeen = Date.now();
 
-      // `volatile` => if a receiving client's buffer is backed up, drop this
-      // packet rather than queueing it. For cursors, the freshest position wins
-      // and stale positions are worthless, so dropping is exactly right.
       socket.volatile.to(socket.data.roomId).emit(EVENTS.MOVED, {
         id: user.id,
         x: user.x,
@@ -115,18 +94,6 @@ export function registerCursorHandlers(io: TypedServer, store: PresenceStore): (
   return startPresenceLoops(io, store);
 }
 
-/**
- * Background loops, run by every replica:
- *
- *  - Heartbeat: refresh `lastSeen` (and the latest position) in the presence
- *    store for every socket this replica owns. This keeps idle-but-connected
- *    cursors alive and persists a recent position for late-joining peers.
- *
- *  - Sweep: remove presence entries whose `lastSeen` is older than the TTL — the
- *    signature of a replica that crashed without cleaning up — and broadcast a
- *    LEFT so every client removes the ghost cursor. `removeUser` is idempotent,
- *    so concurrent sweeps across replicas don't double-emit.
- */
 function startPresenceLoops(io: TypedServer, store: PresenceStore): () => void {
   const heartbeat = setInterval(async () => {
     const now = Date.now();
@@ -156,7 +123,6 @@ function startPresenceLoops(io: TypedServer, store: PresenceStore): () => void {
     }
   }, config.sweepIntervalMs);
 
-  // Don't let these timers keep the process alive on shutdown.
   heartbeat.unref?.();
   sweep.unref?.();
 

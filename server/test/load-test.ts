@@ -1,27 +1,3 @@
-/**
- * Load / soak test: simulates many concurrent users joining one room and moving
- * their cursors at a fixed rate, then reports connection success, broadcast
- * throughput, and end-to-end latency percentiles.
- *
- * All simulated clients run in this single process, which means a designated
- * "sender" and the "receivers" share one wall clock — so we can measure true
- * end-to-end latency (send -> broadcast -> receive) without changing the wire
- * protocol.
- *
- * Usage:
- *   URL=http://localhost:8080 USERS=1000 ROOMS=10 DURATION_MS=20000 MOVE_HZ=15 \
- *     pnpm loadtest
- *
- * Knobs (all via env):
- *   URL          target (gateway :8080 for multi-replica, :3001 for one backend)
- *   USERS        number of simulated clients
- *   ROOMS        spread users across this many rooms (default 1 = one big room).
- *                Real workspaces have many rooms; one giant room is a worst-case
- *                fan-out that mostly stresses THIS test process, not the server.
- *   DURATION_MS  how long to drive cursor movement
- *   MOVE_HZ      cursor moves per second, per client
- *   CONNECT_BATCH ramp connections in batches of this size (default 200)
- */
 import { io as ioClient, type Socket } from 'socket.io-client';
 import { EVENTS } from '../src/features/cursors/events.ts';
 import type { JoinAck } from '../src/features/cursors/types.ts';
@@ -34,8 +10,6 @@ const DURATION_MS = Number.parseInt(process.env.DURATION_MS ?? '15000', 10);
 const MOVE_HZ = Number.parseInt(process.env.MOVE_HZ ?? '20', 10);
 const CONNECT_BATCH = Math.max(1, Number.parseInt(process.env.CONNECT_BATCH ?? '200', 10));
 
-// Which room a given user index belongs to. The latency "sender" is user-0, so
-// its room (suffix 0) is where we measure end-to-end latency.
 const roomFor = (i: number): string => (ROOMS > 1 ? `${ROOM}-${i % ROOMS}` : ROOM);
 
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));

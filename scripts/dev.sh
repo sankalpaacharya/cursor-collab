@@ -1,24 +1,10 @@
 #!/usr/bin/env bash
-#
-# Live Cursors — interactive setup & run.
-#
-#   ./start                 Show the menu (setup / dev / docker / tests).
-#   ./start --dev           Setup if needed, then run backend + client.
-#   ./start --install       Install dependencies only.
-#   ./start --docker        Full topology (Redis + 2 backends + Caddy).
-#   ./start --test          Run the test suite.
-#   ./start --help
-#
-# Local dev runs Redis (reusing one on :6379 or starting a container), the
-# backend on :3001, and the Vite client on :5173 which proxies WebSocket traffic
-# to the backend. Press Ctrl-C to stop.
 
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-# ---- pretty output -----------------------------------------------------------
 if [[ -t 1 ]]; then
   BOLD=$'\033[1m'; DIM=$'\033[2m'; RED=$'\033[31m'; GREEN=$'\033[32m'
   YELLOW=$'\033[33m'; CYAN=$'\033[36m'; MAGENTA=$'\033[35m'; BLUE=$'\033[34m'; NC=$'\033[0m'
@@ -29,6 +15,23 @@ info()  { printf "%s▸%s %s\n" "$CYAN" "$NC" "$*"; }
 ok()    { printf "%s✓%s %s\n" "$GREEN" "$NC" "$*"; }
 warn()  { printf "%s!%s %s\n" "$YELLOW" "$NC" "$*"; }
 die()   { printf "%s✗ %s%s\n" "$RED" "$*" "$NC" >&2; exit 1; }
+
+usage() {
+  cat <<'EOF'
+Live Cursors — interactive setup & run.
+
+  ./start                 Show the menu (setup / dev / docker / tests).
+  ./start --dev           Setup if needed, then run backend + client.
+  ./start --install       Install dependencies only.
+  ./start --docker        Full topology (Redis + 2 backends + Caddy).
+  ./start --test          Run the test suite.
+  ./start --help
+
+Local dev runs Redis (reusing one on :6379 or starting a container), the
+backend on :3001, and the Vite client on :5173 which proxies WebSocket traffic
+to the backend. Press Ctrl-C to stop.
+EOF
+}
 
 banner() {
   printf "%s%s" "$BOLD" "$CYAN"
@@ -44,7 +47,6 @@ ART
   printf "  %sLive Cursors%s — real-time shared workspace\n\n" "$DIM" "$NC"
 }
 
-# ---- prerequisites -----------------------------------------------------------
 require_node() {
   command -v node >/dev/null || die "node is not installed (need >= 22, >= 23 recommended)"
   local major; major="$(node -p 'process.versions.node.split(".")[0]')"
@@ -65,7 +67,6 @@ deps_present() {
   [[ -d node_modules && -d server/node_modules && -d client/node_modules ]]
 }
 
-# ---- actions -----------------------------------------------------------------
 do_install() {
   require_node; ensure_pnpm
   info "Installing dependencies…"
@@ -106,11 +107,8 @@ do_docker() {
 REDIS_CONTAINER="cursor-redis"
 STARTED_REDIS=false
 
-# True if something is already listening on localhost:6379.
 redis_port_open() { (exec 3<>/dev/tcp/127.0.0.1/6379) 2>/dev/null && exec 3>&- && return 0 || return 1; }
 
-# Ensure a Redis is reachable on :6379. Reuse an existing one (e.g. your docker
-# stack), otherwise start a small disposable container.
 ensure_redis() {
   export REDIS_ENABLED="true"
   export REDIS_URL="${REDIS_URL:-redis://localhost:6379}"
@@ -146,14 +144,6 @@ do_dev() {
   printf "  client   %shttp://localhost:5173%s  %s← open this, in two windows%s\n\n" \
     "$DIM" "$NC" "$BOLD" "$NC"
 
-  # `concurrently` supervises both processes: clean aligned [server]/[client]
-  # output, and it tree-kills the whole process tree on shutdown — no orphaned
-  # vite/node. `exec` makes each dev binary the direct child so signals land
-  # without an intermediate pnpm swallowing them.
-  #
-  # We run it in the BACKGROUND and signal it BY PID from the trap, because some
-  # tools (pnpm/node) place themselves in their own process group, which a plain
-  # terminal Ctrl-C can miss. Explicit `kill` guarantees delivery.
   node_modules/.bin/concurrently \
     --kill-others \
     --names "server,client" \
@@ -167,8 +157,6 @@ do_dev() {
   dev_cleanup
 }
 
-# Tears down the dev session: stop the process supervisor (which tree-kills the
-# server + client), then the Redis container if we started it. Idempotent.
 dev_cleanup() {
   [[ "$DEV_CLEANED" == "1" ]] && return
   DEV_CLEANED=1
@@ -185,7 +173,6 @@ dev_cleanup() {
   fi
 }
 
-# ---- interactive menu --------------------------------------------------------
 menu() {
   banner
   printf "  What would you like to do?\n\n"
@@ -216,7 +203,6 @@ menu() {
   esac
 }
 
-# ---- arg parsing -------------------------------------------------------------
 ACTION=""
 for arg in "$@"; do
   case "$arg" in
@@ -224,7 +210,7 @@ for arg in "$@"; do
     --install|--setup) ACTION="install" ;;
     --docker)   ACTION="docker" ;;
     --test)     ACTION="test" ;;
-    -h|--help)  sed -n '3,19p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help)  usage; exit 0 ;;
     *) die "unknown option: $arg (try --help)" ;;
   esac
 done

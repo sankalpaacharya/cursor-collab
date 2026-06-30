@@ -7,19 +7,10 @@ interface WorkspaceProps {
   onMove: (x: number, y: number) => void;
 }
 
-/**
- * The shared canvas. Tracks the local pointer, converts it to normalised
- * coordinates relative to its own bounds, and reports it via `onMove`. Renders
- * every peer cursor on top.
- *
- * Coordinates are normalised (0..1) so that participants with different window
- * sizes still see each other's cursors at the same *relative* location.
- */
 export function Workspace({ peers, onMove }: WorkspaceProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
 
-  // Track the element size so we can scale normalised peer coordinates to px.
   useEffect(() => {
     const el = ref.current;
     if (!el) return;

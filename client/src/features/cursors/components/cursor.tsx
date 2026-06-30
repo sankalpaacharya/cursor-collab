@@ -7,11 +7,6 @@ interface CursorProps {
   height: number;
 }
 
-/**
- * A single remote cursor: an arrow rendered in the user's colour with a name
- * pill. Positioned absolutely from normalised coordinates (0..1) scaled to the
- * workspace size. A CSS transition smooths motion between discrete updates.
- */
 function CursorComponent({ user, width, height }: CursorProps) {
   const left = user.x * width;
   const top = user.y * height;
