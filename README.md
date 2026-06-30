@@ -67,7 +67,7 @@ pnpm dev:client   # → :5173
 
 we are using caddy as the gateway and fastify as the backend framework, with react on the frontend.
 
-caddy spreads users across the backends round-robin. because we use websocket-only connections, each client opens a single long-lived connection to whichever backend it lands on and stays there for the whole session. so we don't need sticky sessions or cookies. caddy just health-checks the backends and stops routing to any that go down.
+caddy spreads users across the backends round-robin, each client opens a single long-lived connection to whichever backend it lands on and stays there for the whole session. caddy just health-checks the backends and stops routing to any that go down.
 
 this is set in the caddy config:
 ```
