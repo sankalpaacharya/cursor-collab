@@ -41,6 +41,10 @@ pnpm dev:client               # → :5173  (open in two windows)
 
 ## How it works
 
+<p align="center">
+  <img src="docs/architecture.svg" alt="Caddy serves the React app; the WebSocket goes straight to the backend where Swarm load-balances across replicas; Redis handles fan-out and presence" width="100%" />
+</p>
+
 The browser loads the React app from **Caddy**, then opens a **WebSocket straight to the backend**, where **Docker Swarm load-balances** it across N stateless **Fastify + Socket.IO** replicas.
 
 **Redis does two jobs:**
@@ -50,7 +54,7 @@ The browser loads the React app from **Caddy**, then opens a **WebSocket straigh
 
 Backends are **stateless** (all shared state is in Redis), so any can be killed or restarted freely; a TTL sweep clears cursors left by a crashed one. The client throttles moves to ~60/sec so a fast mouse never floods the server.
 
-Diagram: [`docs/architecture-split.excalidraw`](docs/architecture-split.excalidraw) (open in [Excalidraw](https://excalidraw.com)).
+Editable diagram source: [`docs/architecture-split.excalidraw`](docs/architecture-split.excalidraw) (open in [Excalidraw](https://excalidraw.com)).
 
 ## Deploy
 
