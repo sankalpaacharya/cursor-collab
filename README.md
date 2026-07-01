@@ -17,11 +17,9 @@
   <img alt="Tests" src="https://img.shields.io/badge/tests-passing-2f9e44?style=flat-square" />
 </p>
 
-
-
 ## Set Up
 
-from a fresh clone, `./start` bootstraps pnpm, installs dependencies, and runs the backend + client together:
+From a fresh clone, `./start` bootstraps pnpm, installs dependencies, and runs the backend + client together:
 
 ```bash
 ./start
@@ -32,87 +30,43 @@ from a fresh clone, `./start` bootstraps pnpm, installs dependencies, and runs t
   <img src="assets/dev.jpg" alt="Backend and client running in the dev process dashboard" width="49%" />
 </p>
 
-
-### Manual Installation
-
-1. install dependencies
+### Manual
 
 ```bash
 pnpm install
+docker compose up -d redis    # the backend connects to it
+pnpm dev:server               # → :3001
+pnpm dev:client               # → :5173  (open in two windows)
 ```
 
-2. start Redis (the backend connects to it)
+## How it works
+
+The browser loads the React app from **Caddy**, then opens a **WebSocket straight to the backend**, where **Docker Swarm load-balances** it across N stateless **Fastify + Socket.IO** replicas.
+
+**Redis does two jobs:**
+
+- **Adapter (fan-out).** A backend can only reach its *own* clients. So it publishes cursor moves to Redis; the other backends are subscribed and deliver to theirs. This is what lets people on different backends see each other.
+- **Presence.** A shared list of who's in each room, so a late joiner instantly sees everyone already there. It also backs crash recovery.
+
+Backends are **stateless** (all shared state is in Redis), so any can be killed or restarted freely; a TTL sweep clears cursors left by a crashed one. The client throttles moves to ~60/sec so a fast mouse never floods the server.
+
+Diagram: [`docs/architecture-split.excalidraw`](docs/architecture-split.excalidraw) (open in [Excalidraw](https://excalidraw.com)).
+
+## Deploy
+
+- **One machine** (dev/demo): `docker compose up --build` → http://localhost:8080
+- **Many machines** (production, incl. AWS): Docker Swarm across N nodes, `docker stack deploy`.
+
+Full runbook (ECR, EC2, swarm, scaling, teardown) in [DEPLOY.md](DEPLOY.md).
+
+## Test
 
 ```bash
-docker compose up -d redis
+pnpm test                                         # integration (real socket clients)
+URL=http://localhost:3001 USERS=100 pnpm loadtest # 100+ concurrent users, latency percentiles
+pnpm test:e2e                                     # end-to-end in real browsers
 ```
 
-3. start the backend (one terminal)
+## Structure
 
-```bash
-pnpm dev:server   # → :3001
-```
-
-4. start the client (another terminal)
-
-```bash
-pnpm dev:client   # → :5173
-```
-
-## Architecture Decision
-
-<p align="center">
-  <img src="docs/diagram.svg" alt="Architecture: clients → Caddy gateway → backend replicas → Redis" width="100%" />
-</p>
-
-Let's follow a single cursor move and see what every box in that diagram is actually doing.
-
-**The client.** It's a plain React app. You move your mouse, it sends the position over a websocket. Now here's the thing, a mouse fires hundreds of events a second. If we sent all of them we'd be DDoSing our own server. So the client only sends about 60 a second, and the newest position wins. It also keeps everyone else's cursors in state and draws them on screen.
-
-**Caddy, the gateway.** This is the single front door. It does three jobs: serves the React app, spreads the websocket connections across the backends, and health-checks each backend so a dead one stops getting traffic.
-
-You might ask, don't we need sticky sessions so a client keeps hitting the same backend? Fair. But we use websocket-only connections, and a websocket is a single long-lived connection. It opens once to whatever backend it lands on and stays there. There's nothing to keep together across requests, so plain round-robin is enough. No cookies, no stickiness.
-
-```
-reverse_proxy backend1:3001 backend2:3001 {
-    health_uri /healthz
-}
-```
-
-**The backends.** Fastify + Socket.IO. For now we run two, but you can run as many as you want. The important part is they're stateless. They don't keep anything important in their own memory, all the shared state lives in Redis. That's the whole trick that lets us kill, restart, or add a backend whenever we want and nobody notices more than a quick reconnect.
-
-**Redis.** Here's where it gets interesting, because Redis is doing two completely separate jobs.
-
-The first is fan-out. Say you're on backend1 and I'm on backend2. When you move, backend1 has never heard of me. So it shouts your move into Redis, every backend is listening, and backend2 hears it and passes it to me. Without this, people on different backends just wouldn't see each other.
-
-The second is presence. It's a shared list of who's in each room and where their cursor is. When someone new joins, they read this list and instantly see everyone already there, even the people sitting on other backends. The live fan-out only carries new moves, it can't tell a fresh joiner who was already in the room. That's what presence is for.
-
-**So what happens when a backend dies?** Nothing scary. The state is in Redis, not in the backend, so we lose nothing. Clients reconnect to another backend and re-sync. The only loose end is that a crashed backend can't clean up after itself, so its users would hang around as ghost cursors. A background sweep handles that, anything that hasn't checked in for 30 seconds gets removed.
-
-That's the whole system. Two backends or twenty, the picture is the same.
-
-We're on Docker Swarm for now to keep deployment simple, and we can move to k8s later if it ever needs it. And Caddy serves the React app today, but we could push that to a CDN like Cloudflare whenever we want.
-
-## Folder structure
-
-organised feature-wise (vertical slices). reference: [Vertical Codebase](https://tkdodo.eu/blog/the-vertical-codebase)
-
-
-## Test it
-
-Integration tests run real Socket.IO clients against the server (join, broadcast, disconnect, validation):
-
-```bash
-pnpm test
-```
-
-The load test simulates a crowd and measures real end-to-end latency, from a mouse move on one client, through the server, to another client's socket:
-
-```bash
-# start a server first, then:
-URL=http://localhost:8080 USERS=1000 ROOMS=10 pnpm loadtest
-```
-
-## Deploying multiple servers
-
-See [DEPLOY.md](DEPLOY.md). It covers the local Docker topology, scaling with Docker Swarm (one machine or several), and what a real deployment needs: shared Redis, a websocket-aware load balancer, and health checks.
+Organised feature-wise (vertical slices). Reference: [Vertical Codebase](https://tkdodo.eu/blog/the-vertical-codebase).

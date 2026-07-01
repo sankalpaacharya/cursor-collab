@@ -7,6 +7,8 @@ RUN printf 'onlyBuiltDependencies:\n  - esbuild\n' > pnpm-workspace.yaml \
  && pnpm install
 
 COPY client/ ./
+ARG VITE_SERVER_URL=""
+ENV VITE_SERVER_URL=$VITE_SERVER_URL
 RUN pnpm build
 
 FROM caddy:2-alpine

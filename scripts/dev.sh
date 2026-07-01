@@ -154,7 +154,7 @@ do_swarm() {
   banner
   info "Building images…"
   docker build -t cursor-backend:latest ./server
-  docker build -t cursor-gateway:latest -f caddy/Dockerfile .
+  docker build --build-arg VITE_SERVER_URL=http://localhost:3001 -t cursor-gateway:latest -f caddy/Dockerfile .
 
   if swarm_active; then
     ok "Swarm already active."
@@ -244,8 +244,8 @@ dev_cleanup() {
 menu() {
   banner
   printf "  What would you like to do?\n\n"
-  printf "    %s1%s  Run locally    %s(installs if needed, backend + client)%s\n" "$GREEN" "$NC" "$DIM" "$NC"
-  printf "    %s2%s  Run on Docker  %s(full stack: Redis + backends + Caddy)%s\n" "$GREEN" "$NC" "$DIM" "$NC"
+  printf "    %s1%s  Dev mode       %s(backend + client run locally w/ hot reload; Redis in Docker)%s\n" "$GREEN" "$NC" "$DIM" "$NC"
+  printf "    %s2%s  Full stack     %s(everything in Docker: Redis + 2 backends + Caddy → :8080)%s\n" "$GREEN" "$NC" "$DIM" "$NC"
   printf "    %s3%s  Run tests      %s(unit + integration)%s\n" "$GREEN" "$NC" "$DIM" "$NC"
   printf "    %s4%s  Run E2E tests  %s(real browsers, multi-user)%s\n" "$GREEN" "$NC" "$DIM" "$NC"
   printf "    %s5%s  E2E demo       %s(watch cursors move, needs a display)%s\n" "$GREEN" "$NC" "$DIM" "$NC"

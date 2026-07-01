@@ -79,7 +79,7 @@ docker swarm init --advertise-addr <manager-private-ip>
 docker swarm join --token <worker-token> <manager-private-ip>:2377
 ```
 
-**4. Deploy.** Copy `docker-stack.yml` + `caddy/Caddyfile.swarm` to the manager, point the `image:` lines at your ECR URLs, then:
+**4. Deploy.** Copy `docker-stack.yml` + `caddy/Caddyfile.split` to the manager, point the `image:` lines at your ECR URLs, then:
 
 ```bash
 aws ecr get-login-password | ssh manager "docker login --username AWS --password-stdin $ECR"

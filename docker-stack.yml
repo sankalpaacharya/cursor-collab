@@ -15,6 +15,12 @@ services:
       NODE_ENV: production
       REDIS_ENABLED: 'true'
       REDIS_URL: redis://redis:6379
+      CORS_ORIGIN: '*'
+    ports:
+      - target: 3001
+        published: 3001
+        protocol: tcp
+        mode: ingress
     networks:
       - cursornet
     deploy:
@@ -46,4 +52,4 @@ networks:
 
 configs:
   caddyfile:
-    file: ./caddy/Caddyfile.swarm
+    file: ./caddy/Caddyfile.split
